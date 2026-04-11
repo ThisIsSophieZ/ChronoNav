@@ -1,7 +1,6 @@
 /**
- * 页面主世界（MAIN world）：拦截 fetch / XHR，在匹配到「当前输入框文本」的字符串载荷上
- * 静默前置 [System Time: YYYY-MM-DD HH:mm:ss]。
- * 与 content script 通过 CustomEvent「chrono-nav-prompt-sync」同步 lastPrompt。
+ * 页面主世界（MAIN world）：保守拦截 fetch / XHR，
+ * 仅对明确的 JSON / 文本请求体做一次性时间锚点注入，避免破坏附件上传或二进制请求。
  */
 (function () {
   const EVT = "chrono-nav-prompt-sync";
@@ -27,6 +26,10 @@
     return PREFIX_FMT + ts + "]";
   }
 
+  function normalizeText(text) {
+    return String(text || "").replace(/\u200b/g, "").replace(/\s+/g, " ").trim();
+  }
+
   window.addEventListener(
     EVT,
     (e) => {
@@ -40,54 +43,95 @@
   function shouldAugment(url) {
     if (!url || typeof url !== "string") return false;
     if (url.includes("gemini.google.com")) return true;
-    if (
+    return (
       url.includes("google.com") &&
       (url.includes("Bard") ||
         url.includes("Generative") ||
         url.includes("generativelanguage"))
-    ) {
-      return true;
+    );
+  }
+
+  function getHeaderValue(headers, name) {
+    if (!headers) return "";
+    const lowerName = name.toLowerCase();
+    if (typeof headers.get === "function") {
+      return headers.get(name) || headers.get(lowerName) || "";
     }
-    return false;
+    if (Array.isArray(headers)) {
+      const pair = headers.find((entry) => {
+        return Array.isArray(entry) && String(entry[0]).toLowerCase() === lowerName;
+      });
+      return pair ? pair[1] : "";
+    }
+    if (typeof headers === "object") {
+      for (const key of Object.keys(headers)) {
+        if (key.toLowerCase() === lowerName) {
+          return headers[key];
+        }
+      }
+    }
+    return "";
   }
 
-  function prependToText(text) {
-    if (typeof text !== "string" || !text.length) return text;
-    const trimmed = text.trim();
-    const lp = (lastPrompt || "").trim();
-    if (!lp || trimmed !== lp) return text;
-    const p = formatPrefix();
-    if (text.startsWith(p)) return text;
-    return p + "\n" + text;
+  function isSupportedContentType(contentType) {
+    const value = String(contentType || "").toLowerCase();
+    if (!value) return true;
+    if (value.includes("multipart/form-data")) return false;
+    if (value.includes("application/octet-stream")) return false;
+    return (
+      value.includes("application/json") ||
+      value.includes("text/plain") ||
+      value.includes("application/x-www-form-urlencoded")
+    );
   }
 
-  function walkJson(value, seen) {
-    if (value === null || value === undefined) return value;
-    if (typeof value === "string") return prependToText(value);
+  function prependToPrompt(text, state) {
+    if (state.done || typeof text !== "string" || !text.length) return text;
+    const normalizedPrompt = normalizeText(lastPrompt);
+    const normalizedText = normalizeText(text);
+    if (!normalizedPrompt || normalizedText !== normalizedPrompt) return text;
+    const prefix = formatPrefix();
+    if (text.startsWith(prefix)) {
+      state.done = true;
+      return text;
+    }
+    state.done = true;
+    return prefix + "\n" + text;
+  }
+
+  function walkJson(value, state, seen) {
+    if (value === null || value === undefined || state.done) return value;
+    if (typeof value === "string") return prependToPrompt(value, state);
     if (typeof value !== "object") return value;
     if (seen.has(value)) return value;
     seen.add(value);
+
     if (Array.isArray(value)) {
       for (let i = 0; i < value.length; i++) {
-        value[i] = walkJson(value[i], seen);
+        value[i] = walkJson(value[i], state, seen);
+        if (state.done) break;
       }
       return value;
     }
-    for (const k of Object.keys(value)) {
-      value[k] = walkJson(value[k], seen);
+
+    for (const key of Object.keys(value)) {
+      value[key] = walkJson(value[key], state, seen);
+      if (state.done) break;
     }
     return value;
   }
 
   function augmentBodyString(bodyStr) {
     if (bodyStr == null || bodyStr === "") return bodyStr;
+
+    const state = { done: false };
     try {
       const parsed = JSON.parse(bodyStr);
-      const seen = new WeakSet();
-      walkJson(parsed, seen);
-      return JSON.stringify(parsed);
+      walkJson(parsed, state, new WeakSet());
+      return state.done ? JSON.stringify(parsed) : bodyStr;
     } catch {
-      return prependToText(bodyStr);
+      const nextText = prependToPrompt(bodyStr, state);
+      return state.done ? nextText : bodyStr;
     }
   }
 
@@ -96,8 +140,14 @@
     if (typeof body === "string") return augmentBodyString(body);
     if (body instanceof URLSearchParams) {
       const next = new URLSearchParams(body.toString());
-      for (const [k, v] of next.entries()) {
-        next.set(k, augmentBodyString(v));
+      let replaced = false;
+      for (const [key, value] of next.entries()) {
+        if (replaced) break;
+        const augmented = augmentBodyString(value);
+        if (augmented !== value) {
+          next.set(key, augmented);
+          replaced = true;
+        }
       }
       return next;
     }
@@ -113,65 +163,91 @@
     if (typeof input === "object" && input instanceof Request) {
       const req = input;
       const method = (req.method || "GET").toUpperCase();
-      if (method === "GET" || method === "HEAD" || !shouldAugment(req.url)) {
+      const contentType = getHeaderValue(init && init.headers, "content-type") || req.headers.get("content-type");
+
+      if (
+        method === "GET" ||
+        method === "HEAD" ||
+        !shouldAugment(req.url) ||
+        !isSupportedContentType(contentType)
+      ) {
         return origFetch.call(this, input, init);
       }
-      return req.clone().text().then((t) => {
-        if (init && Object.prototype.hasOwnProperty.call(init, "body")) {
-          if (typeof init.body === "string") {
-            return origFetch.call(this, input, {
-              ...init,
-              body: augmentBodyString(init.body),
-            });
-          }
+
+      if (init && Object.prototype.hasOwnProperty.call(init, "body")) {
+        if (typeof init.body === "string" || init.body instanceof URLSearchParams) {
+          return origFetch.call(this, input, {
+            ...init,
+            body: augmentBody(init.body),
+          });
+        }
+        return origFetch.call(this, input, init);
+      }
+
+      return req.clone().text().then((text) => {
+        const nextBody = augmentBodyString(text);
+        if (nextBody === text) {
           return origFetch.call(this, input, init);
         }
-        const nb = augmentBodyString(t);
-        return origFetch.call(this, new Request(req, { body: nb }), init);
+        return origFetch.call(this, new Request(req, { body: nextBody }), init);
       });
     }
 
     const mergedInit = init || {};
-    if (!shouldAugment(url)) {
-      return origFetch.call(this, input, mergedInit);
-    }
     const method = (mergedInit.method || "GET").toUpperCase();
-    if (method === "GET" || method === "HEAD") {
+    const contentType = getHeaderValue(mergedInit.headers, "content-type");
+
+    if (
+      method === "GET" ||
+      method === "HEAD" ||
+      !shouldAugment(url) ||
+      !isSupportedContentType(contentType) ||
+      mergedInit.body == null
+    ) {
       return origFetch.call(this, input, mergedInit);
     }
-    let body = mergedInit.body;
-    if (body == null) {
-      return origFetch.call(this, input, mergedInit);
+
+    if (typeof mergedInit.body === "string" || mergedInit.body instanceof URLSearchParams) {
+      const nextBody = augmentBody(mergedInit.body);
+      return origFetch.call(this, input, { ...mergedInit, body: nextBody });
     }
-    if (typeof body === "string" || body instanceof URLSearchParams) {
-      const next = { ...mergedInit, body: augmentBody(body) };
-      return origFetch.call(this, input, next);
-    }
-    if (typeof Blob !== "undefined" && body instanceof Blob) {
-      return body.text().then((t) => {
-        const next = { ...mergedInit, body: augmentBodyString(t) };
-        return origFetch.call(this, input, next);
-      });
-    }
+
     return origFetch.call(this, input, mergedInit);
   };
 
   const origOpen = XMLHttpRequest.prototype.open;
   XMLHttpRequest.prototype.open = function (method, url) {
-    try {
-      this.__chronoNavUrl = typeof url === "string" ? url : "";
-    } catch (_) {
-      this.__chronoNavUrl = "";
-    }
+    this.__chronoNavMethod = String(method || "GET").toUpperCase();
+    this.__chronoNavUrl = typeof url === "string" ? url : "";
+    this.__chronoNavContentType = "";
     return origOpen.apply(this, arguments);
+  };
+
+  const origSetRequestHeader = XMLHttpRequest.prototype.setRequestHeader;
+  XMLHttpRequest.prototype.setRequestHeader = function (name, value) {
+    if (String(name || "").toLowerCase() === "content-type") {
+      this.__chronoNavContentType = String(value || "");
+    }
+    return origSetRequestHeader.apply(this, arguments);
   };
 
   const origSend = XMLHttpRequest.prototype.send;
   XMLHttpRequest.prototype.send = function (body) {
-    const u = this.__chronoNavUrl || "";
-    if (shouldAugment(u) && body != null && typeof body === "string") {
-      return origSend.call(this, augmentBodyString(body));
+    const method = this.__chronoNavMethod || "GET";
+    const url = this.__chronoNavUrl || "";
+    const contentType = this.__chronoNavContentType || "";
+
+    if (
+      method === "GET" ||
+      method === "HEAD" ||
+      !shouldAugment(url) ||
+      !isSupportedContentType(contentType) ||
+      typeof body !== "string"
+    ) {
+      return origSend.apply(this, arguments);
     }
-    return origSend.apply(this, arguments);
+
+    const nextBody = augmentBodyString(body);
+    return origSend.call(this, nextBody);
   };
 })();
