@@ -1,0 +1,124 @@
+/* Gemini ChronoNav — 右侧大纲侧栏（毛玻璃） */
+#chrono-nav-toc-root {
+  position: fixed;
+  top: 72px;
+  right: 12px;
+  width: 220px;
+  max-height: calc(100vh - 96px);
+  z-index: 2147483646;
+  font-family: "Google Sans", "Segoe UI", system-ui, sans-serif;
+  font-size: 12px;
+  line-height: 1.35;
+  pointer-events: auto;
+  box-sizing: border-box;
+}
+
+#chrono-nav-toc-root * {
+  box-sizing: border-box;
+}
+
+.chrono-nav-toc-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 12px 10px;
+  border-radius: 14px;
+  border: 1px solid rgba(255, 255, 255, 0.22);
+  background: rgba(32, 33, 36, 0.42);
+  backdrop-filter: blur(16px) saturate(1.35);
+  -webkit-backdrop-filter: blur(16px) saturate(1.35);
+  box-shadow:
+    0 8px 32px rgba(0, 0, 0, 0.28),
+    inset 0 1px 0 rgba(255, 255, 255, 0.08);
+  overflow: hidden;
+}
+
+.chrono-nav-toc-title {
+  margin: 0 0 4px 0;
+  padding: 0 4px;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: rgba(255, 255, 255, 0.72);
+}
+
+.chrono-nav-toc-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  max-height: calc(100vh - 180px);
+  overflow-y: auto;
+  overflow-x: hidden;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(255, 255, 255, 0.28) transparent;
+}
+
+.chrono-nav-toc-list::-webkit-scrollbar {
+  width: 6px;
+}
+
+.chrono-nav-toc-list::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.22);
+  border-radius: 6px;
+}
+
+.chrono-nav-toc-item {
+  margin: 0;
+  padding: 0;
+}
+
+.chrono-nav-toc-btn {
+  width: 100%;
+  text-align: left;
+  padding: 8px 8px;
+  margin-bottom: 4px;
+  border: none;
+  border-radius: 10px;
+  cursor: pointer;
+  color: rgba(255, 255, 255, 0.92);
+  background: rgba(255, 255, 255, 0.06);
+  transition: background 0.15s ease, transform 0.12s ease;
+  word-break: break-word;
+}
+
+.chrono-nav-toc-btn:hover {
+  background: rgba(138, 180, 248, 0.22);
+}
+
+.chrono-nav-toc-btn:active {
+  transform: scale(0.98);
+}
+
+.chrono-nav-toc-empty {
+  padding: 8px;
+  color: rgba(255, 255, 255, 0.45);
+  font-size: 11px;
+}
+
+@media (prefers-color-scheme: light) {
+  .chrono-nav-toc-panel {
+    border: 1px solid rgba(0, 0, 0, 0.08);
+    background: rgba(255, 255, 255, 0.55);
+    box-shadow:
+      0 8px 32px rgba(0, 0, 0, 0.12),
+      inset 0 1px 0 rgba(255, 255, 255, 0.9);
+  }
+
+  .chrono-nav-toc-title {
+    color: rgba(32, 33, 36, 0.65);
+  }
+
+  .chrono-nav-toc-btn {
+    color: rgba(32, 33, 36, 0.92);
+    background: rgba(32, 33, 36, 0.05);
+  }
+
+  .chrono-nav-toc-btn:hover {
+    background: rgba(26, 115, 232, 0.12);
+  }
+
+  .chrono-nav-toc-empty {
+    color: rgba(32, 33, 36, 0.45);
+  }
+}

@@ -1,0 +1,22 @@
+{
+  "manifest_version": 3,
+  "name": "Gemini ChronoNav",
+  "version": "1.0.0",
+  "description": "为 Gemini 网页聊天注入系统时间锚点，并提供右侧对话大纲导航。",
+  "host_permissions": ["https://gemini.google.com/*"],
+  "content_scripts": [
+    {
+      "matches": ["https://gemini.google.com/*"],
+      "js": ["content.js"],
+      "css": ["sidebar.css"],
+      "run_at": "document_start",
+      "all_frames": false
+    }
+  ],
+  "web_accessible_resources": [
+    {
+      "resources": ["inject.js"],
+      "matches": ["https://gemini.google.com/*"]
+    }
+  ]
+}
