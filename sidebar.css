@@ -171,13 +171,30 @@
   position: relative;
   list-style: none;
   margin: 0;
-  padding: 4px 0 0 0;
+  /* 上下留出安全边距，避免首/末圆点贴边被裁；scroll-padding 让点击/箭头滚动不会把圆点停在边缘。 */
+  padding: 12px 0 14px 0;
   flex: 1 1 auto;
   min-height: 0;
   overflow-y: auto;
   overflow-x: hidden;
   scrollbar-width: none;
   -ms-overflow-style: none;
+  scroll-padding-block: 14px;
+  /* 上下边缘渐隐：越过滚动边界的圆点淡出，而非被"拦腰"硬切成半圆（竖线在静止外壳上不受影响）。 */
+  -webkit-mask-image: linear-gradient(
+    to bottom,
+    transparent 0,
+    #000 16px,
+    #000 calc(100% - 16px),
+    transparent 100%
+  );
+  mask-image: linear-gradient(
+    to bottom,
+    transparent 0,
+    #000 16px,
+    #000 calc(100% - 16px),
+    transparent 100%
+  );
 }
 
 #mate-sidebar.is-collapsed {
