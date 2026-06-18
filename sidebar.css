@@ -1,5 +1,6 @@
-/* Gemini ChronoNav — Subway Map Timeline */
-#chrono-nav-toc-root {
+/* Gemini ChronoNav — 三段式 Flex：上下悬浮箭头 + 中间毛玻璃滚动区 */
+
+#mate-sidebar {
   position: fixed;
   top: 50%;
   right: 16px;
@@ -14,32 +15,92 @@
   box-sizing: border-box;
   display: flex;
   flex-direction: column;
+  align-items: stretch;
+  gap: 10px;
   overflow: visible;
-  border-radius: 16px;
+  background: transparent;
+  box-shadow: none;
+  border-radius: 0;
   transition:
     width 0.4s ease-in-out,
     max-height 0.4s ease-in-out;
 }
 
 @media (max-width: 1280px) {
-  #chrono-nav-toc-root {
+  #mate-sidebar {
     width: 232px;
     right: 10px;
   }
 }
 
 @media (max-width: 960px) {
-  #chrono-nav-toc-root {
+  #mate-sidebar {
     display: none;
   }
 }
 
-#chrono-nav-toc-root * {
+#mate-sidebar * {
   box-sizing: border-box;
 }
 
-.chrono-nav-toc-panel {
+/* 无用户消息（主页 / 新对话）：整体隐藏侧栏 */
+#mate-sidebar.is-empty {
+  display: none;
+}
+
+/* —— 顶 / 底：极简折线箭头，无背景 —— */
+.mate-nav-up,
+.mate-nav-down {
+  flex-shrink: 0;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  padding: 0;
+  margin: 0;
+  background: transparent;
+  border: none;
+  box-shadow: none;
+}
+
+.mate-nav-step {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 0;
+  padding: 4px;
+  border: none;
+  border-radius: 0;
+  cursor: pointer;
+  background: transparent;
+  color: rgba(95, 99, 104, 0.45);
+  line-height: 0;
+  transition: color 0.18s ease, opacity 0.2s ease;
+}
+
+.mate-nav-step:hover:not(:disabled) {
+  color: #4285f4;
+}
+
+.mate-nav-step:disabled {
+  opacity: 0.22;
+  cursor: default;
+  pointer-events: none;
+}
+
+.mate-nav-chevron {
+  display: block;
+  pointer-events: none;
+  vertical-align: middle;
+}
+
+/* —— 中间：唯一毛玻璃外壳 + 独立纵向滚动 —— */
+.mate-list-container {
   position: relative;
+  flex: 1 1 auto;
+  flex-grow: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
   padding: 14px 12px 12px 12px;
   border-radius: 16px;
   border: 1px solid rgba(255, 255, 255, 0.18);
@@ -49,11 +110,7 @@
     inset 0 1px 0 rgba(255, 255, 255, 0.18);
   backdrop-filter: blur(24px) saturate(1.45);
   -webkit-backdrop-filter: blur(24px) saturate(1.45);
-  display: flex;
-  flex-direction: column;
-  flex: 1;
-  min-height: 0;
-  max-height: 100%;
+  overflow: hidden;
   transition:
     background 0.4s ease-in-out,
     border-color 0.4s ease-in-out,
@@ -63,57 +120,51 @@
     -webkit-backdrop-filter 0.4s ease-in-out;
 }
 
-.chrono-nav-toc-toggle {
+.chrono-nav-toc-list::-webkit-scrollbar {
+  width: 0;
+  height: 0;
+}
+
+/* 固定竖线：挂在不滚动的外壳上，随圆点滚动而保持不动（地铁轴线） */
+.mate-list-container::before {
+  content: "";
+  position: absolute;
+  left: 32px;
+  top: 24px;
+  bottom: 18px;
+  width: 1px;
+  background: rgba(255, 255, 255, 0.34);
+  pointer-events: none;
+  z-index: 0;
+}
+
+.mate-sidebar-toggle {
   position: absolute;
   top: 50%;
-  right: -30px;
+  right: -28px;
   transform: translateY(-50%);
-  width: 28px;
-  height: 64px;
+  width: auto;
+  min-width: 24px;
+  height: auto;
+  padding: 6px 4px;
   border: none;
-  border-radius: 14px;
-  padding: 0;
+  border-radius: 0;
   font-size: 18px;
   font-weight: 600;
-  line-height: 64px;
+  line-height: 1;
   text-align: center;
   cursor: pointer;
-  color: rgba(90, 90, 90, 0.92);
-  background: rgba(255, 255, 255, 0.92);
-  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.12);
-  backdrop-filter: blur(8px);
-  -webkit-backdrop-filter: blur(8px);
-  z-index: 10000;
-  transition:
-    opacity 0.4s ease-in-out,
-    transform 0.4s ease-in-out;
-}
-
-.chrono-nav-toc-toggle:hover {
-  color: rgba(32, 33, 36, 0.98);
-  background: rgba(255, 255, 255, 0.98);
-}
-
-#chrono-nav-toc-root.is-collapsed {
-  width: 32px;
-}
-
-#chrono-nav-toc-root.is-collapsed .chrono-nav-toc-panel {
-  padding: 0;
-  min-height: 18px;
-  border: none;
+  color: rgba(90, 90, 90, 0.88);
   background: transparent;
   box-shadow: none;
   backdrop-filter: none;
   -webkit-backdrop-filter: none;
+  z-index: 2;
+  transition: opacity 0.4s ease-in-out, color 0.2s ease;
 }
 
-#chrono-nav-toc-root.is-collapsed .chrono-nav-toc-list {
-  display: none;
-}
-
-#chrono-nav-toc-root.is-collapsed .chrono-nav-toc-fab-wrap {
-  display: none;
+.mate-sidebar-toggle:hover {
+  color: rgba(32, 33, 36, 0.98);
 }
 
 .chrono-nav-toc-list {
@@ -121,30 +172,40 @@
   list-style: none;
   margin: 0;
   padding: 4px 0 0 0;
-  flex: 1;
+  flex: 1 1 auto;
   min-height: 0;
-  max-height: none;
   overflow-y: auto;
-  overflow-y: overlay;
   overflow-x: hidden;
   scrollbar-width: none;
   -ms-overflow-style: none;
 }
 
-.chrono-nav-toc-list::-webkit-scrollbar {
-  width: 0;
-  height: 0;
+#mate-sidebar.is-collapsed {
+  width: 32px;
 }
 
-.chrono-nav-toc-list::before {
-  content: "";
-  position: absolute;
-  left: 20px;
-  top: 10px;
-  bottom: 10px;
-  width: 1px;
-  background: rgba(255, 255, 255, 0.34);
-  pointer-events: none;
+#mate-sidebar.is-collapsed .mate-nav-up,
+#mate-sidebar.is-collapsed .mate-nav-down {
+  display: none;
+}
+
+#mate-sidebar.is-collapsed .mate-list-container {
+  padding: 0;
+  min-height: 18px;
+  border: none;
+  background: transparent;
+  box-shadow: none;
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+  overflow: hidden;
+}
+
+#mate-sidebar.is-collapsed .chrono-nav-toc-list {
+  display: none;
+}
+
+#mate-sidebar.is-collapsed .mate-list-container::before {
+  display: none;
 }
 
 .chrono-nav-toc-item {
@@ -245,7 +306,6 @@
     0 8px 16px rgba(0, 0, 0, 0.18);
 }
 
-/* 视口当前条：进度锚点（.toc-item 为语义类名，可与 .chrono-nav-toc-item 并存） */
 .chrono-nav-toc-item.toc-item.is-active .chrono-nav-toc-node {
   animation: none;
   transform: translateY(-50%) scale(1.4);
@@ -273,54 +333,6 @@
   transform: translateX(1px) scale(0.985);
 }
 
-/* 单步导航 FAB */
-.chrono-nav-toc-fab-wrap {
-  display: flex;
-  flex-shrink: 0;
-  justify-content: center;
-  align-items: center;
-  gap: 14px;
-  padding: 10px 0 2px;
-  transition: opacity 0.4s ease-in-out;
-}
-
-.chrono-nav-toc-fab {
-  width: 42px;
-  height: 42px;
-  border-radius: 50%;
-  border: 1px solid rgba(255, 255, 255, 0.38);
-  padding: 0;
-  cursor: pointer;
-  font-size: 17px;
-  line-height: 1;
-  color: rgba(55, 55, 55, 0.92);
-  background: rgba(255, 255, 255, 0.42);
-  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.1);
-  backdrop-filter: blur(14px) saturate(1.35);
-  -webkit-backdrop-filter: blur(14px) saturate(1.35);
-  transition:
-    transform 0.2s ease,
-    box-shadow 0.2s ease,
-    opacity 0.2s ease,
-    background 0.2s ease;
-}
-
-.chrono-nav-toc-fab:hover:not(:disabled) {
-  transform: scale(1.08);
-  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.14);
-  background: rgba(255, 255, 255, 0.58);
-}
-
-.chrono-nav-toc-fab:active:not(:disabled) {
-  transform: scale(1.02);
-}
-
-.chrono-nav-toc-fab:disabled {
-  opacity: 0.22;
-  cursor: default;
-  pointer-events: none;
-}
-
 .chrono-nav-toc-empty {
   padding: 4px 0 0 0;
   color: rgba(120, 120, 120, 0.72);
@@ -328,12 +340,12 @@
   transition: opacity 0.4s ease-in-out;
 }
 
-/* —— 闲置自动收起：极简点阵线（非手动 is-collapsed） —— */
-#chrono-nav-toc-root.is-idle:not(.is-collapsed) {
+/* —— 闲置：中间区透明化，上下箭头变淡 —— */
+#mate-sidebar.is-idle:not(.is-collapsed) {
   width: 40px !important;
 }
 
-#chrono-nav-toc-root.is-idle:not(.is-collapsed) .chrono-nav-toc-panel {
+#mate-sidebar.is-idle:not(.is-collapsed) .mate-list-container {
   padding: 10px 4px 8px 4px;
   border-color: transparent;
   background: transparent;
@@ -342,46 +354,49 @@
   -webkit-backdrop-filter: none;
 }
 
-#chrono-nav-toc-root.is-idle:not(.is-collapsed) .chrono-nav-toc-toggle {
+#mate-sidebar.is-idle:not(.is-collapsed) .mate-sidebar-toggle {
   opacity: 0;
   pointer-events: none;
 }
 
-#chrono-nav-toc-root.is-idle:not(.is-collapsed) .chrono-nav-toc-fab-wrap {
-  opacity: 0.32;
+#mate-sidebar.is-idle:not(.is-collapsed) .mate-nav-up,
+#mate-sidebar.is-idle:not(.is-collapsed) .mate-nav-down {
+  opacity: 0.35;
 }
 
-#chrono-nav-toc-root.is-idle:not(.is-collapsed) .chrono-nav-toc-content {
+#mate-sidebar.is-idle:not(.is-collapsed) .chrono-nav-toc-content {
   opacity: 0;
   pointer-events: none;
 }
 
-#chrono-nav-toc-root.is-idle:not(.is-collapsed) .chrono-nav-toc-empty {
+#mate-sidebar.is-idle:not(.is-collapsed) .chrono-nav-toc-empty {
   opacity: 0;
   pointer-events: none;
 }
 
-#chrono-nav-toc-root.is-idle:not(.is-collapsed) .chrono-nav-toc-list::before {
-  left: 11px;
+#mate-sidebar.is-idle:not(.is-collapsed) .mate-list-container::before {
+  left: 19px;
+  top: 20px;
+  bottom: 14px;
 }
 
-#chrono-nav-toc-root.is-idle:not(.is-collapsed) .chrono-nav-toc-node {
-  left: 6px;
+#mate-sidebar.is-idle:not(.is-collapsed) .chrono-nav-toc-node {
+  left: 10px;
   animation: chrono-nav-node-pulse 1.8s ease-in-out infinite;
 }
 
-#chrono-nav-toc-root.is-idle:not(.is-collapsed) .chrono-nav-toc-btn {
+#mate-sidebar.is-idle:not(.is-collapsed) .chrono-nav-toc-btn {
   padding-left: 20px;
   padding-right: 4px;
 }
 
-#chrono-nav-toc-root.is-idle:not(.is-collapsed) .chrono-nav-toc-btn:hover {
+#mate-sidebar.is-idle:not(.is-collapsed) .chrono-nav-toc-btn:hover {
   transform: translateX(0);
   background: transparent;
   box-shadow: none;
 }
 
-#chrono-nav-toc-root.is-idle:not(.is-collapsed) .chrono-nav-toc-btn:hover .chrono-nav-toc-node {
+#mate-sidebar.is-idle:not(.is-collapsed) .chrono-nav-toc-btn:hover .chrono-nav-toc-node {
   animation: chrono-nav-node-pulse 1.8s ease-in-out infinite;
   transform: translateY(-50%) scale(1.3);
   box-shadow:
@@ -400,92 +415,106 @@
   }
 }
 
-@media (prefers-color-scheme: light) {
-  .chrono-nav-toc-panel {
-    border-color: rgba(255, 255, 255, 0.44);
-    background: rgba(255, 255, 255, 0.28);
-    box-shadow:
-      0 16px 32px rgba(0, 0, 0, 0.12),
-      inset 0 1px 0 rgba(255, 255, 255, 0.4);
-  }
-
-  .chrono-nav-toc-toggle {
-    color: rgba(90, 90, 90, 0.92);
-    background: rgba(255, 255, 255, 0.94);
-  }
-
-  .chrono-nav-toc-list::before {
-    background: rgba(120, 120, 120, 0.22);
-  }
-
-  .chrono-nav-toc-time {
-    color: rgba(90, 90, 90, 0.62);
-  }
-
-  .chrono-nav-toc-btn {
-    color: rgba(55, 55, 55, 0.92);
-  }
-
-  .chrono-nav-toc-btn:hover {
-    background: rgba(255, 255, 255, 0.42);
-  }
-
-  .chrono-nav-toc-empty {
-    color: rgba(120, 120, 120, 0.68);
-  }
-
-  .chrono-nav-toc-fab {
-    color: rgba(55, 55, 55, 0.92);
-    background: rgba(255, 255, 255, 0.5);
-    border-color: rgba(255, 255, 255, 0.55);
-  }
+/* —— 主题跟随：以 Gemini 页面实际明暗为准（由 content.js 打 is-light / is-dark）。
+   节点圆点配色（--chrono-node-color / Google 四色）不在此处覆盖，保持原样。 —— */
+#mate-sidebar.is-light .mate-list-container {
+  border-color: rgba(255, 255, 255, 0.44);
+  background: rgba(255, 255, 255, 0.28);
+  box-shadow:
+    0 16px 32px rgba(0, 0, 0, 0.12),
+    inset 0 1px 0 rgba(255, 255, 255, 0.4);
 }
 
-@media (prefers-color-scheme: dark) {
-  .chrono-nav-toc-panel {
-    border-color: rgba(255, 255, 255, 0.12);
-    background: rgba(26, 26, 26, 0.36);
-    box-shadow:
-      0 18px 34px rgba(0, 0, 0, 0.3),
-      inset 0 1px 0 rgba(255, 255, 255, 0.08);
-  }
+#mate-sidebar.is-light .mate-sidebar-toggle {
+  color: rgba(90, 90, 90, 0.92);
+}
 
-  .chrono-nav-toc-toggle {
-    color: rgba(240, 240, 240, 0.92);
-    background: rgba(44, 44, 44, 0.9);
-    box-shadow: 0 6px 18px rgba(0, 0, 0, 0.32);
-  }
+#mate-sidebar.is-light .mate-nav-step {
+  color: rgba(95, 99, 104, 0.5);
+}
 
-  .chrono-nav-toc-list::before {
-    background: rgba(255, 255, 255, 0.18);
-  }
+#mate-sidebar.is-light .mate-nav-step:hover:not(:disabled) {
+  color: #4285f4;
+}
 
-  .chrono-nav-toc-time {
-    color: rgba(225, 225, 225, 0.48);
-  }
+#mate-sidebar.is-light .mate-list-container::before {
+  background: rgba(120, 120, 120, 0.22);
+}
 
-  .chrono-nav-toc-btn {
-    color: rgba(245, 245, 245, 0.92);
-  }
+#mate-sidebar.is-light .chrono-nav-toc-time {
+  color: rgba(90, 90, 90, 0.62);
+}
 
-  .chrono-nav-toc-btn:hover {
-    background: rgba(255, 255, 255, 0.08);
-    box-shadow:
-      0 10px 24px rgba(0, 0, 0, 0.24),
-      inset 0 1px 0 rgba(255, 255, 255, 0.08);
-  }
+#mate-sidebar.is-light .chrono-nav-toc-btn {
+  color: rgba(55, 55, 55, 0.92);
+}
 
-  .chrono-nav-toc-empty {
-    color: rgba(220, 220, 220, 0.58);
-  }
+#mate-sidebar.is-light .chrono-nav-toc-btn:hover {
+  background: rgba(255, 255, 255, 0.42);
+}
 
-  .chrono-nav-toc-fab {
-    color: rgba(245, 245, 245, 0.95);
-    background: rgba(48, 48, 48, 0.45);
-    border-color: rgba(255, 255, 255, 0.14);
-  }
+#mate-sidebar.is-light .chrono-nav-toc-empty {
+  color: rgba(120, 120, 120, 0.68);
+}
 
-  .chrono-nav-toc-fab:hover:not(:disabled) {
-    background: rgba(64, 64, 64, 0.55);
+#mate-sidebar.is-dark .mate-list-container {
+  border-color: rgba(255, 255, 255, 0.12);
+  background: rgba(26, 26, 26, 0.36);
+  box-shadow:
+    0 18px 34px rgba(0, 0, 0, 0.3),
+    inset 0 1px 0 rgba(255, 255, 255, 0.08);
+}
+
+#mate-sidebar.is-dark .mate-sidebar-toggle {
+  color: rgba(240, 240, 240, 0.92);
+}
+
+#mate-sidebar.is-dark .mate-nav-step {
+  color: rgba(255, 255, 255, 0.38);
+}
+
+#mate-sidebar.is-dark .mate-nav-step:hover:not(:disabled) {
+  color: #4285f4;
+}
+
+#mate-sidebar.is-dark .mate-list-container::before {
+  background: rgba(255, 255, 255, 0.18);
+}
+
+#mate-sidebar.is-dark .chrono-nav-toc-time {
+  color: rgba(225, 225, 225, 0.48);
+}
+
+#mate-sidebar.is-dark .chrono-nav-toc-btn {
+  color: rgba(245, 245, 245, 0.92);
+}
+
+#mate-sidebar.is-dark .chrono-nav-toc-btn:hover {
+  background: rgba(255, 255, 255, 0.08);
+  box-shadow:
+    0 10px 24px rgba(0, 0, 0, 0.24),
+    inset 0 1px 0 rgba(255, 255, 255, 0.08);
+}
+
+#mate-sidebar.is-dark .chrono-nav-toc-empty {
+  color: rgba(220, 220, 220, 0.58);
+}
+
+/* —— 键盘可见焦点环：防止站点全局 reset 抹掉 outline 后键盘用户找不到焦点 —— */
+#mate-sidebar .mate-nav-step:focus-visible,
+#mate-sidebar .mate-sidebar-toggle:focus-visible,
+#mate-sidebar .chrono-nav-toc-btn:focus-visible {
+  outline: 2px solid #4285f4;
+  outline-offset: 2px;
+}
+
+/* —— 尊重「减少动画」系统偏好：停掉圆点脉冲与过渡，但不改任何配色 —— */
+@media (prefers-reduced-motion: reduce) {
+  #mate-sidebar *,
+  #mate-sidebar *::before,
+  #mate-sidebar *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
   }
 }

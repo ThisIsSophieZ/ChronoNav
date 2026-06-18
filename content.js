@@ -7,7 +7,8 @@
 
 (function () {
   const EVT = "chrono-nav-prompt-sync";
-  const ROOT_ID = "chrono-nav-toc-root";
+  const ROOT_ID = "mate-sidebar";
+  const LEGACY_ROOT_ID = "chrono-nav-toc-root";
   const TOC_LIST_ID = "chrono-nav-toc-list";
   const TOGGLE_ID = "chrono-nav-toc-toggle";
   const COLLAPSED_CLASS = "is-collapsed";
@@ -503,18 +504,44 @@
       if (root.classList.contains(COLLAPSED_CLASS)) return;
       scheduleIdleCollapse();
     });
+    // 键盘可达：聚焦侧栏内任意按钮即展开；焦点移出后再按规则收起。
+    root.addEventListener("focusin", expandFromIdle);
+    root.addEventListener("focusout", (e) => {
+      if (root.classList.contains(COLLAPSED_CLASS)) return;
+      if (e.relatedTarget && root.contains(e.relatedTarget)) return;
+      // 鼠标仍悬停侧栏时保持展开（与旧版鼠标行为一致），收起交给 mouseleave。
+      try {
+        if (root.matches(":hover")) return;
+      } catch (_) {}
+      scheduleIdleCollapse();
+    });
     root.addEventListener("chrono-nav-idle-reset", expandFromIdle);
   }
 
-  function ensureFabMarkup(root) {
-    const panel = root.querySelector(".chrono-nav-toc-panel");
-    if (!panel || panel.querySelector(".chrono-nav-toc-fab-wrap")) return;
-    const wrap = document.createElement("div");
-    wrap.className = "chrono-nav-toc-fab-wrap";
-    wrap.innerHTML =
-      `<button type="button" class="chrono-nav-toc-fab" id="${FAB_UP_ID}" aria-label="上一条用户消息">⬆️</button>` +
-      `<button type="button" class="chrono-nav-toc-fab" id="${FAB_DOWN_ID}" aria-label="下一条用户消息">⬇️</button>`;
-    panel.appendChild(wrap);
+  function getSidebarInnerHtml() {
+    const chevronUp =
+      '<svg class="mate-nav-chevron" viewBox="0 0 24 24" width="22" height="22" aria-hidden="true"><polyline points="7 15 12 10 17 15" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+    const chevronDown =
+      '<svg class="mate-nav-chevron" viewBox="0 0 24 24" width="22" height="22" aria-hidden="true"><polyline points="7 9 12 14 17 9" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+    return (
+      '<div class="mate-nav-up">' +
+      `<button type="button" class="mate-nav-step" id="${FAB_UP_ID}" aria-label="上一条用户消息">${chevronUp}</button>` +
+      "</div>" +
+      '<div class="mate-list-container">' +
+      `<button type="button" class="mate-sidebar-toggle" id="${TOGGLE_ID}" aria-label="切换大纲"></button>` +
+      `<ul class="chrono-nav-toc-list" id="${TOC_LIST_ID}"></ul>` +
+      "</div>" +
+      '<div class="mate-nav-down">' +
+      `<button type="button" class="mate-nav-step" id="${FAB_DOWN_ID}" aria-label="下一条用户消息">${chevronDown}</button>` +
+      "</div>"
+    );
+  }
+
+  /** 旧版单 panel 结构 → 三段式 Flex 侧栏 */
+  function ensureMateSidebarStructure(root) {
+    if (!root || root.querySelector(".mate-list-container")) return;
+    root.innerHTML = getSidebarInnerHtml();
+    lastTocSignature = "";
   }
 
   function getTocListEl() {
@@ -578,11 +605,13 @@
     root.dataset.chronoStepBound = "1";
     root.addEventListener("click", (e) => {
       const t = e.target;
-      if (!(t instanceof HTMLElement)) return;
-      if (t.id === FAB_UP_ID) {
+      if (!(t instanceof Element)) return;
+      const upHit = t.closest(`#${FAB_UP_ID}`);
+      const downHit = t.closest(`#${FAB_DOWN_ID}`);
+      if (upHit) {
         e.preventDefault();
         stepNav(-1);
-      } else if (t.id === FAB_DOWN_ID) {
+      } else if (downHit) {
         e.preventDefault();
         stepNav(1);
       }
@@ -655,33 +684,113 @@
     ensureChatScrollListener();
   }
 
+  /**
+   * 解析 CSS 颜色字符串为 { r, g, b, a }；无法解析或全透明时返回 null。
+   * 仅处理 rgb()/rgba()（getComputedStyle 的背景色一般已归一化为该形式）。
+   */
+  function parseRgbColor(value) {
+    if (!value) return null;
+    const m = String(value).match(
+      /rgba?\(\s*(\d+)\s*,\s*(\d+)\s*,\s*(\d+)\s*(?:,\s*([\d.]+)\s*)?\)/i
+    );
+    if (!m) return null;
+    const a = m[4] == null ? 1 : parseFloat(m[4]);
+    return { r: +m[1], g: +m[2], b: +m[3], a: Number.isFinite(a) ? a : 1 };
+  }
+
+  /**
+   * 以 Gemini 页面「实际」背景明暗为准（而非系统 prefers-color-scheme），
+   * 这样用户在 Gemini 内手动切主题、与系统不一致时，侧栏毛玻璃也能正确搭配。
+   * 自底向上找到第一个不透明背景计算亮度；全部失败时回退到系统设置。
+   */
+  function isDarkEnvironment() {
+    try {
+      const candidates = [document.body, document.documentElement];
+      for (const el of candidates) {
+        if (!el) continue;
+        const rgb = parseRgbColor(getComputedStyle(el).backgroundColor);
+        if (rgb && rgb.a > 0) {
+          const luminance = 0.2126 * rgb.r + 0.7152 * rgb.g + 0.0722 * rgb.b;
+          return luminance < 128;
+        }
+      }
+    } catch (_) {}
+    try {
+      return !!(
+        window.matchMedia && window.matchMedia("(prefers-color-scheme: dark)").matches
+      );
+    } catch (_) {
+      return false;
+    }
+  }
+
+  /** 给侧栏根节点打 is-dark / is-light，驱动 sidebar.css 中的毛玻璃配色（不影响节点圆点配色）。 */
+  function applySidebarTheme(root) {
+    const el = root || document.getElementById(ROOT_ID);
+    if (!el) return;
+    const dark = isDarkEnvironment();
+    el.classList.toggle("is-dark", dark);
+    el.classList.toggle("is-light", !dark);
+  }
+
+  /** 地标语义：让侧栏成为可被读屏/快捷键识别的导航区域，并给列表加可读名称。 */
+  function ensureSidebarA11y(root) {
+    if (!root) return;
+    if (root.getAttribute("role") !== "navigation") {
+      root.setAttribute("role", "navigation");
+    }
+    if (!root.getAttribute("aria-label")) {
+      root.setAttribute("aria-label", "对话大纲导航");
+    }
+    const ul = root.querySelector(`#${TOC_LIST_ID}`);
+    if (ul && !ul.getAttribute("aria-label")) {
+      ul.setAttribute("aria-label", "用户消息大纲");
+    }
+  }
+
+  function startThemeWatcher() {
+    const reapply = () => applySidebarTheme();
+    try {
+      const mo = new MutationObserver(reapply);
+      const opts = {
+        attributes: true,
+        attributeFilter: ["class", "style", "data-theme", "dark", "data-dark-theme"],
+      };
+      if (document.documentElement) mo.observe(document.documentElement, opts);
+      if (document.body) mo.observe(document.body, opts);
+    } catch (_) {}
+    try {
+      const mq = window.matchMedia("(prefers-color-scheme: dark)");
+      if (mq.addEventListener) mq.addEventListener("change", reapply);
+      else if (mq.addListener) mq.addListener(reapply);
+    } catch (_) {}
+  }
+
   function ensureTocRoot() {
     let root = document.getElementById(ROOT_ID);
     if (root) {
-      ensureFabMarkup(root);
+      ensureMateSidebarStructure(root);
       bindToggle(root);
       applyCollapsedState(root, isTocCollapsed());
       bindIdleAutoCollapse(root);
       bindStepNav(root);
+      ensureSidebarA11y(root);
+      applySidebarTheme(root);
       return root;
     }
+    const legacy = document.getElementById(LEGACY_ROOT_ID);
+    if (legacy) legacy.remove();
     root = document.createElement("div");
     root.id = ROOT_ID;
     root.setAttribute("data-chrono-nav", "toc");
-    root.innerHTML =
-      '<div class="chrono-nav-toc-panel">' +
-      `<button type="button" class="chrono-nav-toc-toggle" id="${TOGGLE_ID}" aria-label="切换大纲"></button>` +
-      '<ul class="chrono-nav-toc-list" id="chrono-nav-toc-list"></ul>' +
-      '<div class="chrono-nav-toc-fab-wrap">' +
-      `<button type="button" class="chrono-nav-toc-fab" id="${FAB_UP_ID}" aria-label="上一条用户消息">⬆️</button>` +
-      `<button type="button" class="chrono-nav-toc-fab" id="${FAB_DOWN_ID}" aria-label="下一条用户消息">⬇️</button>` +
-      "</div>" +
-      "</div>";
+    root.innerHTML = getSidebarInnerHtml();
     document.documentElement.appendChild(root);
     bindToggle(root);
     applyCollapsedState(root, isTocCollapsed());
     bindIdleAutoCollapse(root);
     bindStepNav(root);
+    ensureSidebarA11y(root);
+    applySidebarTheme(root);
     return root;
   }
 
@@ -698,6 +807,8 @@
     lastTocSignature = signature;
     ul.innerHTML = "";
     if (!nodes.length) {
+      // 主页 / 新对话等无用户消息场景：整体隐藏侧栏，不显示毛玻璃外壳与箭头。
+      root.classList.add("is-empty");
       const li = document.createElement("li");
       li.className = "chrono-nav-toc-item chrono-nav-toc-empty";
       li.textContent = "暂无用户消息";
@@ -708,6 +819,7 @@
       updateFabState();
       return true;
     }
+    root.classList.remove("is-empty");
     const rows = nodes.map((node) => {
       const raw = getRawMessageText(node);
       return { node, raw, parsed: parseLeadingSystemTime(raw), pendingHhmm: null };
@@ -755,7 +867,9 @@
       content.appendChild(label);
       btn.appendChild(nodeDot);
       btn.appendChild(content);
-      btn.title = fullText || "跳转到第 " + (index + 1) + " 条用户消息";
+      const accessibleName = fullText || "跳转到第 " + (index + 1) + " 条用户消息";
+      btn.title = accessibleName;
+      btn.setAttribute("aria-label", accessibleName);
       btn.addEventListener("click", (e) => {
         e.preventDefault();
         e.stopPropagation();
@@ -798,6 +912,7 @@
   function boot() {
     bindInputSync();
     startTocObserver();
+    startThemeWatcher();
   }
 
   if (document.readyState === "loading") {
