@@ -246,12 +246,27 @@
 
 .chrono-nav-toc-time {
   display: block;
-  margin-bottom: 3px;
+  margin-bottom: 0;
+  max-height: 0;
+  opacity: 0;
+  overflow: hidden;
   font-size: 11px;
   line-height: 1;
   letter-spacing: 0.02em;
   color: rgba(90, 90, 90, 0.62);
   white-space: nowrap;
+  transition:
+    opacity 0.16s ease,
+    max-height 0.16s ease,
+    margin-bottom 0.16s ease;
+}
+
+/* 默认不显示时间，仅在悬停 / 键盘聚焦该条目时浮现，避免长列表冗余。 */
+.chrono-nav-toc-item.toc-item:hover .chrono-nav-toc-time,
+.chrono-nav-toc-item.toc-item:focus-within .chrono-nav-toc-time {
+  max-height: 16px;
+  margin-bottom: 3px;
+  opacity: 1;
 }
 
 .chrono-nav-toc-time--hidden {

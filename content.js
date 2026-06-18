@@ -55,6 +55,13 @@
   /** 仅当 DOM 中未回显时间戳时，用发送瞬间记录的 HH:mm 与「最新一条」对齐 */
   const pendingPromptTimes = [];
   const nodeMetaMap = new WeakMap();
+  /**
+   * 持久化的时间/颜色缓存，key = `${index}\u0000${归一化正文}`。
+   * nodeMetaMap 以 DOM 节点为键，Gemini 重渲染替换旧节点后即丢失；此 Map 不随节点对象失效，
+   * 用于在节点被替换后恢复已记录的时间，修复「旧消息时间显示丢失」问题。
+   */
+  const tocMetaCache = new Map();
+  const TOC_META_CACHE_MAX = 200;
   let tocBootstrapped = false;
   let prevUserNodeCount = 0;
 
@@ -383,16 +390,33 @@
    * 每个对话节点只绑定一次 meta（颜色 + 时间展示），避免 MutationObserver 重复渲染时重复分配。
    * 无 [System Time: ...] 的历史消息：timeDisplay 为 null，时间气泡隐藏，绝不使用 new Date() 伪造。
    */
-  function ensureNodeMeta(node, index, timeDisplay) {
+  function ensureNodeMeta(node, index, timeDisplay, cacheKey) {
+    const cached = cacheKey ? tocMetaCache.get(cacheKey) : null;
     let meta = nodeMetaMap.get(node);
+    const color = GOOGLE_NODE_COLORS[index % GOOGLE_NODE_COLORS.length];
+    // 时间优先级：本轮解析/pending > 节点既有 meta > 持久缓存（节点被替换时的兜底）。
+    const resolvedTime =
+      timeDisplay ||
+      (meta && meta.timeDisplay) ||
+      (cached && cached.timeDisplay) ||
+      null;
     if (!meta) {
-      meta = {
-        timeDisplay,
-        color: GOOGLE_NODE_COLORS[index % GOOGLE_NODE_COLORS.length],
-      };
+      meta = { timeDisplay: resolvedTime, color };
       nodeMetaMap.set(node, meta);
-    } else if (!meta.timeDisplay && timeDisplay) {
-      meta.timeDisplay = timeDisplay;
+    } else {
+      if (resolvedTime && !meta.timeDisplay) meta.timeDisplay = resolvedTime;
+      meta.color = color;
+    }
+    if (cacheKey) {
+      if (!cached) {
+        tocMetaCache.set(cacheKey, { timeDisplay: meta.timeDisplay, color });
+        if (tocMetaCache.size > TOC_META_CACHE_MAX) {
+          const oldestKey = tocMetaCache.keys().next().value;
+          tocMetaCache.delete(oldestKey);
+        }
+      } else if (meta.timeDisplay && !cached.timeDisplay) {
+        cached.timeDisplay = meta.timeDisplay;
+      }
     }
     return meta;
   }
@@ -814,6 +838,8 @@
       li.textContent = "暂无用户消息";
       tocBootstrapped = true;
       prevUserNodeCount = 0;
+      // 新对话 / 清空：丢弃持久缓存，避免相同 index+文本在不同会话间串味。
+      tocMetaCache.clear();
       ul.appendChild(li);
       syncMessageTracking([]);
       updateFabState();
@@ -832,7 +858,8 @@
       const { node, parsed, pendingHhmm } = row;
       const fullText = getMessageText(node);
       const timeDisplay = parsed.hadStamp && parsed.hhmm ? parsed.hhmm : pendingHhmm || null;
-      const meta = ensureNodeMeta(node, index, timeDisplay);
+      const cacheKey = `${index}\u0000${fullText}`;
+      const meta = ensureNodeMeta(node, index, timeDisplay, cacheKey);
       const li = document.createElement("li");
       li.className = "chrono-nav-toc-item toc-item";
       li.dataset.chronoNodeKey = String(index);
