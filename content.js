@@ -27,6 +27,10 @@
   let chatScrollRaf = 0;
   /** 上一次的高亮项，仅当 active 真正变化时才把它滚入侧栏可视区，避免逐帧平滑滚动相互打架 */
   let lastActiveLi = null;
+  /** 导航软锁：点击 TOC / 上下箭头后短时间内强制以目标项为 active，避免平滑滚动途中被可见比例算法抢回邻项 */
+  let navTargetLi = null;
+  let navTargetUntil = 0;
+  const NAV_LOCK_MS = 700;
 
   const EDITOR_SELECTORS = [
     'div[contenteditable="true"][aria-label*="Enter a prompt"]',
@@ -623,6 +627,7 @@
     if (!target) return;
     const idx = parseInt(target.dataset.chronoNodeKey || "", 10);
     if (!Number.isFinite(idx)) return;
+    lockNavTarget(target);
     scrollToMessageIndex(idx);
   }
 
@@ -669,45 +674,17 @@
   /**
    * 按视口上下留白（与原 IntersectionObserver rootMargin 相近）计算当前最「在屏」的用户消息。
    */
-  function refreshActiveFromScroll() {
+  /**
+   * 统一应用高亮：清掉旧 is-active、给目标加 is-active，并仅在「变化时」把它滚入侧栏内部可视区。
+   * 点击 TOC / 上下箭头 / 主区滚动三种来源都经由此函数,保证高亮与底部箭头状态一致。
+   */
+  function setActiveLi(activeLi) {
     const ul = getTocListEl();
     if (!ul) return;
-    const nodes =
-      trackedMessageNodes.length > 0 ? trackedMessageNodes : findUserMessageNodes();
-    if (!nodes.length) {
-      ul.querySelectorAll("li.toc-item").forEach((li) => li.classList.remove("is-active"));
-      lastActiveLi = null;
-      updateFabState();
-      return;
-    }
-    const viewH = window.innerHeight;
-    const bandTop = viewH * 0.08;
-    const bandBottom = viewH - viewH * 0.12;
-    let best = null;
-    let bestRatio = -1;
-    for (let i = 0; i < nodes.length; i++) {
-      const n = nodes[i];
-      const r = n.getBoundingClientRect();
-      const visibleTop = Math.max(r.top, bandTop);
-      const visibleBottom = Math.min(r.bottom, bandBottom);
-      const visible = Math.max(0, visibleBottom - visibleTop);
-      const height = Math.max(1, r.height);
-      const ratio = visible / height;
-      if (ratio > bestRatio) {
-        bestRatio = ratio;
-        best = n;
-      }
-    }
-    ul.querySelectorAll("li.toc-item").forEach((li) => li.classList.remove("is-active"));
-    let activeLi = null;
-    if (best && bestRatio > 0.001) {
-      const li = messageToTocLi.get(best);
-      if (li) {
-        li.classList.add("is-active");
-        activeLi = li;
-      }
-    }
-    // 仅在高亮项变化时把它滚入侧栏内部可视区（block: nearest 已可见则不动），统一覆盖点击/箭头/主区滚动三种来源。
+    ul.querySelectorAll("li.toc-item.is-active").forEach((li) => {
+      if (li !== activeLi) li.classList.remove("is-active");
+    });
+    if (activeLi) activeLi.classList.add("is-active");
     if (activeLi && activeLi !== lastActiveLi) {
       try {
         activeLi.scrollIntoView({ behavior: "smooth", block: "nearest" });
@@ -719,6 +696,64 @@
     }
     lastActiveLi = activeLi;
     updateFabState();
+  }
+
+  /** 点击/箭头跳转时立即认领目标项为 active,并加一段软锁,期间滚动回调不再抢回邻项。 */
+  function lockNavTarget(li) {
+    if (!li) return;
+    navTargetLi = li;
+    navTargetUntil = Date.now() + NAV_LOCK_MS;
+    setActiveLi(li);
+  }
+
+  function refreshActiveFromScroll() {
+    const ul = getTocListEl();
+    if (!ul) return;
+    // 软锁期内强制以导航目标为 active（目标已重渲染失联则解锁）。
+    if (navTargetLi) {
+      if (navTargetLi.isConnected && Date.now() < navTargetUntil) {
+        setActiveLi(navTargetLi);
+        return;
+      }
+      navTargetLi = null;
+    }
+    const nodes =
+      trackedMessageNodes.length > 0 ? trackedMessageNodes : findUserMessageNodes();
+    if (!nodes.length) {
+      setActiveLi(null);
+      return;
+    }
+    const viewH = window.innerHeight;
+    const bandTop = viewH * 0.08;
+    const bandBottom = viewH - viewH * 0.12;
+    const viewCenter = viewH / 2;
+    // 第一遍取最大可见比例；第二遍在「与最大比例接近(<=0.05)」的候选里挑离视口中心最近者，
+    // 修复多条同时全可见时高亮停在先出现一条（问题二）的 tie-break。
+    let maxRatio = 0;
+    const metrics = [];
+    for (let i = 0; i < nodes.length; i++) {
+      const n = nodes[i];
+      const r = n.getBoundingClientRect();
+      const visibleTop = Math.max(r.top, bandTop);
+      const visibleBottom = Math.min(r.bottom, bandBottom);
+      const visible = Math.max(0, visibleBottom - visibleTop);
+      const height = Math.max(1, r.height);
+      const ratio = visible / height;
+      const centerDist = Math.abs((r.top + r.bottom) / 2 - viewCenter);
+      metrics.push({ n, ratio, centerDist });
+      if (ratio > maxRatio) maxRatio = ratio;
+    }
+    let best = null;
+    let bestCenterDist = Infinity;
+    if (maxRatio > 0.001) {
+      for (const m of metrics) {
+        if (m.ratio >= maxRatio - 0.05 && m.centerDist < bestCenterDist) {
+          bestCenterDist = m.centerDist;
+          best = m.n;
+        }
+      }
+    }
+    setActiveLi(best ? messageToTocLi.get(best) || null : null);
   }
 
   function syncMessageTracking(nodes) {
@@ -918,6 +953,7 @@
       btn.addEventListener("click", (e) => {
         e.preventDefault();
         e.stopPropagation();
+        lockNavTarget(li);
         node.scrollIntoView({ behavior: "smooth", block: "center", inline: "nearest" });
       });
       li.appendChild(btn);
