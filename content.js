@@ -25,6 +25,8 @@
   let trackedMessageNodes = [];
   let chatScrollEl = null;
   let chatScrollRaf = 0;
+  /** 上一次的高亮项，仅当 active 真正变化时才把它滚入侧栏可视区，避免逐帧平滑滚动相互打架 */
+  let lastActiveLi = null;
 
   const EDITOR_SELECTORS = [
     'div[contenteditable="true"][aria-label*="Enter a prompt"]',
@@ -674,6 +676,7 @@
       trackedMessageNodes.length > 0 ? trackedMessageNodes : findUserMessageNodes();
     if (!nodes.length) {
       ul.querySelectorAll("li.toc-item").forEach((li) => li.classList.remove("is-active"));
+      lastActiveLi = null;
       updateFabState();
       return;
     }
@@ -696,10 +699,25 @@
       }
     }
     ul.querySelectorAll("li.toc-item").forEach((li) => li.classList.remove("is-active"));
+    let activeLi = null;
     if (best && bestRatio > 0.001) {
       const li = messageToTocLi.get(best);
-      if (li) li.classList.add("is-active");
+      if (li) {
+        li.classList.add("is-active");
+        activeLi = li;
+      }
     }
+    // 仅在高亮项变化时把它滚入侧栏内部可视区（block: nearest 已可见则不动），统一覆盖点击/箭头/主区滚动三种来源。
+    if (activeLi && activeLi !== lastActiveLi) {
+      try {
+        activeLi.scrollIntoView({ behavior: "smooth", block: "nearest" });
+      } catch (_) {
+        try {
+          activeLi.scrollIntoView();
+        } catch (_) {}
+      }
+    }
+    lastActiveLi = activeLi;
     updateFabState();
   }
 
