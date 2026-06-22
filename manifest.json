@@ -1,8 +1,10 @@
 {
   "manifest_version": 3,
-  "name": "Gemini ChronoNav",
+  "name": "ChronoNav - Timeline for Gemini",
+  "short_name": "ChronoNav",
   "version": "1.0.0",
-  "description": "为 Gemini 网页聊天注入系统时间锚点，并提供右侧对话大纲导航。",
+  "default_locale": "en",
+  "description": "__MSG_appDesc__",
   "author": "ThisIsSophieZ",
   "homepage_url": "https://github.com/ThisIsSophieZ/Gemini-ChronoNav",
   "icons": {

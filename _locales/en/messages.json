@@ -1,0 +1,49 @@
+{
+  "appDesc": {
+    "message": "Anchor your local system time to every Gemini prompt, and navigate long chats with an interactive message timeline.",
+    "description": "Extension description shown in the Chrome Web Store and the extensions page."
+  },
+  "sidebarLabel": {
+    "message": "Conversation timeline",
+    "description": "Accessible label for the sidebar navigation landmark."
+  },
+  "listLabel": {
+    "message": "Your messages",
+    "description": "Accessible label for the message outline list."
+  },
+  "toggleOutline": {
+    "message": "Toggle outline",
+    "description": "Accessible label for the expand/collapse toggle button."
+  },
+  "expandOutline": {
+    "message": "Expand outline",
+    "description": "Tooltip for the toggle button when the outline is collapsed."
+  },
+  "collapseOutline": {
+    "message": "Collapse outline",
+    "description": "Tooltip for the toggle button when the outline is expanded."
+  },
+  "prevMessage": {
+    "message": "Previous message",
+    "description": "Accessible label for the up navigation arrow."
+  },
+  "nextMessage": {
+    "message": "Next message",
+    "description": "Accessible label for the down navigation arrow."
+  },
+  "emptyPreview": {
+    "message": "(empty)",
+    "description": "Placeholder shown for a message that has no readable text."
+  },
+  "noMessages": {
+    "message": "No messages yet",
+    "description": "Shown in the outline when there are no user messages."
+  },
+  "jumpToMessage": {
+    "message": "Jump to message $index$",
+    "description": "Accessible label for a timeline item. $index$ is the 1-based position.",
+    "placeholders": {
+      "index": { "content": "$1", "example": "3" }
+    }
+  }
+}

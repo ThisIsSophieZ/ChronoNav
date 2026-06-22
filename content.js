@@ -1,5 +1,5 @@
 /**
- * Gemini ChronoNav — Content Script（隔离世界）
+ * ChronoNav — Content Script（隔离世界）
  * 1. 注入 inject.js 到主世界以拦截网络载荷并追加系统时间（界面不显示）。
  * 2. 同步输入框文本供 inject 匹配；拦截发送相关事件以保持 lastPrompt 准确。
  * 3. MutationObserver + 右侧 TOC，点击平滑滚动至对应用户消息节点。
@@ -71,9 +71,18 @@
   let tocBootstrapped = false;
   let prevUserNodeCount = 0;
 
-  /** 与 inject.js 一致：[System Time: YYYY-MM-DD HH:mm:ss]，允许前缀前空白与 ] 后换行 */
+  /** 与 inject.js 一致：[System Time: YYYY-MM-DD HH:mm:ss (可选时区后缀)]，允许前缀前空白与 ] 后换行 */
   const SYSTEM_TIME_PREFIX_RE =
-    /^\s*\[System Time:\s*(\d{4})-(\d{2})-(\d{2})\s+(\d{2}):(\d{2}):(\d{2})\]\s*\n?/i;
+    /^\s*\[System Time:\s*(\d{4})-(\d{2})-(\d{2})\s+(\d{2}):(\d{2}):(\d{2})[^\]]*\]\s*\n?/i;
+
+  /** chrome.i18n 包装：取本地化文案；缺失键或异常（如非扩展环境）时回退到 key 本身。 */
+  function t(key, subs) {
+    try {
+      return chrome.i18n.getMessage(key, subs) || key;
+    } catch (_) {
+      return key;
+    }
+  }
 
   function injectMainWorld() {
     const src = chrome.runtime.getURL("inject.js");
@@ -381,7 +390,7 @@
 
   function truncatePreviewText(text, maxChars) {
     const clean = normalizePromptText(text);
-    if (!clean) return "(空)";
+    if (!clean) return t("emptyPreview");
     return clean.length > maxChars ? `${clean.slice(0, maxChars)}…` : clean;
   }
 
@@ -479,7 +488,7 @@
     const toggle = root.querySelector(`#${TOGGLE_ID}`);
     if (!toggle) return;
     toggle.setAttribute("aria-expanded", collapsed ? "false" : "true");
-    toggle.setAttribute("title", collapsed ? "展开大纲" : "收起大纲");
+    toggle.setAttribute("title", collapsed ? t("expandOutline") : t("collapseOutline"));
     toggle.textContent = collapsed ? "‹" : "›";
     updateFabState();
   }
@@ -555,14 +564,14 @@
       '<svg class="mate-nav-chevron" viewBox="0 0 24 24" width="22" height="22" aria-hidden="true"><polyline points="7 9 12 14 17 9" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg>';
     return (
       '<div class="mate-nav-up">' +
-      `<button type="button" class="mate-nav-step" id="${FAB_UP_ID}" aria-label="上一条用户消息">${chevronUp}</button>` +
+      `<button type="button" class="mate-nav-step" id="${FAB_UP_ID}" aria-label="${t("prevMessage")}">${chevronUp}</button>` +
       "</div>" +
       '<div class="mate-list-container">' +
-      `<button type="button" class="mate-sidebar-toggle" id="${TOGGLE_ID}" aria-label="切换大纲"></button>` +
+      `<button type="button" class="mate-sidebar-toggle" id="${TOGGLE_ID}" aria-label="${t("toggleOutline")}"></button>` +
       `<ul class="chrono-nav-toc-list" id="${TOC_LIST_ID}"></ul>` +
       "</div>" +
       '<div class="mate-nav-down">' +
-      `<button type="button" class="mate-nav-step" id="${FAB_DOWN_ID}" aria-label="下一条用户消息">${chevronDown}</button>` +
+      `<button type="button" class="mate-nav-step" id="${FAB_DOWN_ID}" aria-label="${t("nextMessage")}">${chevronDown}</button>` +
       "</div>"
     );
   }
@@ -817,11 +826,11 @@
       root.setAttribute("role", "navigation");
     }
     if (!root.getAttribute("aria-label")) {
-      root.setAttribute("aria-label", "对话大纲导航");
+      root.setAttribute("aria-label", t("sidebarLabel"));
     }
     const ul = root.querySelector(`#${TOC_LIST_ID}`);
     if (ul && !ul.getAttribute("aria-label")) {
-      ul.setAttribute("aria-label", "用户消息大纲");
+      ul.setAttribute("aria-label", t("listLabel"));
     }
   }
 
@@ -888,7 +897,7 @@
       root.classList.add("is-empty");
       const li = document.createElement("li");
       li.className = "chrono-nav-toc-item chrono-nav-toc-empty";
-      li.textContent = "暂无用户消息";
+      li.textContent = t("noMessages");
       tocBootstrapped = true;
       prevUserNodeCount = 0;
       // 新对话 / 清空：丢弃持久缓存，避免相同 index+文本在不同会话间串味。
@@ -941,13 +950,15 @@
 
       const label = document.createElement("span");
       label.className = "chrono-nav-toc-label";
-      label.textContent = truncatePreviewText(fullText, 20);
+      // 仅做一个宽松的安全上限，真正的视觉截断交给 CSS 的单行 ellipsis（按侧栏像素宽度自适应，
+      // 中英文都按“能放多少像素”截断，不再被固定字符数卡死）。
+      label.textContent = truncatePreviewText(fullText, 80);
 
       content.appendChild(time);
       content.appendChild(label);
       btn.appendChild(nodeDot);
       btn.appendChild(content);
-      const accessibleName = fullText || "跳转到第 " + (index + 1) + " 条用户消息";
+      const accessibleName = fullText || t("jumpToMessage", [String(index + 1)]);
       btn.title = accessibleName;
       btn.setAttribute("aria-label", accessibleName);
       btn.addEventListener("click", (e) => {

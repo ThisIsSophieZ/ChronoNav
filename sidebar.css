@@ -1,11 +1,11 @@
-/* Gemini ChronoNav — 三段式 Flex：上下悬浮箭头 + 中间毛玻璃滚动区 */
+/* ChronoNav — 三段式 Flex：上下悬浮箭头 + 中间毛玻璃滚动区 */
 
 #mate-sidebar {
   position: fixed;
   top: 50%;
   right: 16px;
   transform: translateY(-50%);
-  width: 260px;
+  width: 280px;
   max-height: 80vh;
   z-index: 9999;
   font-family: "Google Sans", "Segoe UI", system-ui, sans-serif;
@@ -28,7 +28,7 @@
 
 @media (max-width: 1280px) {
   #mate-sidebar {
-    width: 232px;
+    width: 252px;
     right: 10px;
   }
 }
@@ -171,8 +171,8 @@
   position: relative;
   list-style: none;
   margin: 0;
-  /* 上下留出安全边距，避免首/末圆点贴边被裁；scroll-padding 让点击/箭头滚动不会把圆点停在边缘。 */
-  padding: 12px 0 14px 0;
+  /* 上下留安全边距避免首/末圆点贴边被裁；左右留 6px 给悬停卡片的圆角与阴影呼吸空间（否则被滚动裁剪成方形）。 */
+  padding: 12px 6px 14px 6px;
   flex: 1 1 auto;
   min-height: 0;
   overflow-y: auto;
@@ -243,7 +243,7 @@
   margin: 0;
   padding: 7px 12px 9px 42px;
   border: none;
-  border-radius: 14px;
+  border-radius: 10px;
   text-align: left;
   cursor: pointer;
   background: transparent;
@@ -267,7 +267,7 @@
   max-height: 0;
   opacity: 0;
   overflow: hidden;
-  font-size: 11px;
+  font-size: 12px;
   line-height: 1;
   letter-spacing: 0.02em;
   color: rgba(90, 90, 90, 0.62);
@@ -296,7 +296,7 @@
 
 .chrono-nav-toc-label {
   display: block;
-  font-size: 12px;
+  font-size: 13px;
   line-height: 1.35;
   white-space: nowrap;
   overflow: hidden;
@@ -305,7 +305,7 @@
 
 .chrono-nav-toc-node {
   position: absolute;
-  left: 15px;
+  left: 9px;
   top: 50%;
   width: 10px;
   height: 10px;
@@ -323,10 +323,9 @@
 }
 
 .chrono-nav-toc-btn:hover {
-  transform: translateX(3px);
   background: rgba(255, 255, 255, 0.28);
   box-shadow:
-    0 10px 24px rgba(0, 0, 0, 0.12),
+    0 6px 16px rgba(0, 0, 0, 0.12),
     inset 0 1px 0 rgba(255, 255, 255, 0.16);
 }
 
@@ -362,7 +361,7 @@
 }
 
 .chrono-nav-toc-btn:active {
-  transform: translateX(1px) scale(0.985);
+  transform: scale(0.985);
 }
 
 .chrono-nav-toc-empty {
@@ -413,7 +412,7 @@
 }
 
 #mate-sidebar.is-idle:not(.is-collapsed) .chrono-nav-toc-node {
-  left: 10px;
+  left: 5px;
   animation: chrono-nav-node-pulse 1.8s ease-in-out infinite;
 }
 

@@ -1,0 +1,49 @@
+{
+  "appDesc": {
+    "message": "为 Gemini 网页聊天注入系统时间锚点，并提供右侧对话大纲导航。",
+    "description": "扩展在 Chrome 网上应用店与扩展页显示的描述。"
+  },
+  "sidebarLabel": {
+    "message": "对话大纲导航",
+    "description": "侧栏导航地标的无障碍名称。"
+  },
+  "listLabel": {
+    "message": "用户消息大纲",
+    "description": "消息大纲列表的无障碍名称。"
+  },
+  "toggleOutline": {
+    "message": "切换大纲",
+    "description": "展开/收起切换按钮的无障碍名称。"
+  },
+  "expandOutline": {
+    "message": "展开大纲",
+    "description": "大纲收起时切换按钮的提示文案。"
+  },
+  "collapseOutline": {
+    "message": "收起大纲",
+    "description": "大纲展开时切换按钮的提示文案。"
+  },
+  "prevMessage": {
+    "message": "上一条用户消息",
+    "description": "向上导航箭头的无障碍名称。"
+  },
+  "nextMessage": {
+    "message": "下一条用户消息",
+    "description": "向下导航箭头的无障碍名称。"
+  },
+  "emptyPreview": {
+    "message": "(空)",
+    "description": "消息无可读文本时的占位文案。"
+  },
+  "noMessages": {
+    "message": "暂无用户消息",
+    "description": "大纲中没有用户消息时显示的文案。"
+  },
+  "jumpToMessage": {
+    "message": "跳转到第 $index$ 条用户消息",
+    "description": "时间线条目的无障碍名称，$index$ 为从 1 开始的序号。",
+    "placeholders": {
+      "index": { "content": "$1", "example": "3" }
+    }
+  }
+}

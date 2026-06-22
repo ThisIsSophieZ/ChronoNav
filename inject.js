@@ -8,6 +8,23 @@
 
   let lastPrompt = "";
 
+  function formatTzOffset(d) {
+    // getTimezoneOffset() 返回 UTC - 本地（分钟），东区为负，故取反
+    const offsetMin = -d.getTimezoneOffset();
+    const sign = offsetMin >= 0 ? "+" : "-";
+    const abs = Math.abs(offsetMin);
+    const pad = (n) => String(n).padStart(2, "0");
+    return sign + pad(Math.floor(abs / 60)) + ":" + pad(abs % 60);
+  }
+
+  function getIanaZone() {
+    try {
+      return Intl.DateTimeFormat().resolvedOptions().timeZone || "";
+    } catch (e) {
+      return "";
+    }
+  }
+
   function formatPrefix() {
     const d = new Date();
     const pad = (n) => String(n).padStart(2, "0");
@@ -23,7 +40,9 @@
       pad(d.getMinutes()) +
       ":" +
       pad(d.getSeconds());
-    return PREFIX_FMT + ts + "]";
+    const zone = getIanaZone();
+    const tzSuffix = " " + formatTzOffset(d) + (zone ? " (" + zone + ")" : "");
+    return PREFIX_FMT + ts + tzSuffix + "]";
   }
 
   function normalizeText(text) {
@@ -42,12 +61,18 @@
 
   function shouldAugment(url) {
     if (!url || typeof url !== "string") return false;
-    if (url.includes("gemini.google.com")) return true;
+    // Gemini 可能用相对 URL（如 /_/BardChatUi/data/batchexecute）发请求，
+    // 先按当前页面解析成绝对 URL，避免相对路径漏判导致不注入。
+    let abs = url;
+    try {
+      abs = new URL(url, location.href).href;
+    } catch (_) {}
+    if (abs.includes("gemini.google.com")) return true;
     return (
-      url.includes("google.com") &&
-      (url.includes("Bard") ||
-        url.includes("Generative") ||
-        url.includes("generativelanguage"))
+      abs.includes("google.com") &&
+      (abs.includes("Bard") ||
+        abs.includes("Generative") ||
+        abs.includes("generativelanguage"))
     );
   }
 

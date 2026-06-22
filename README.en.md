@@ -1,10 +1,12 @@
-# ⏱️ Gemini ChronoNav
+# ⏱️ ChronoNav
 
 [简体中文](./README.md) · **English**
 
 **Give Gemini a real sense of time, and take back control of long conversations.**
 
-Gemini ChronoNav is a lightweight Chrome extension built for the Gemini web app. It silently anchors your local system time onto every prompt you send — with zero noise in the UI — while rendering an elegant, fully interactive conversation timeline (Timeline TOC) on the right edge of the page.
+ChronoNav is a lightweight Chrome extension built for the Gemini web app. It silently anchors your local system time onto every prompt you send — with zero noise in the UI — while rendering an elegant, fully interactive conversation timeline (Timeline TOC) on the right edge of the page.
+
+ChronoNav is an independent extension and is not affiliated with, endorsed by, or sponsored by Google or Gemini.
 
 If you run cross-session DevOps investigations, long-threaded debugging, or frequently lose context in conversations that span hundreds of screens, this extension is made for you.
 
@@ -19,7 +21,7 @@ ChronoNav tackles both pain points: **it fills in temporal context under the hoo
 ## ✨ Core Features
 
 - **⏳ Implicit Time Anchor (System Time Injection)**
-  - The moment you hit send, the extension silently appends a local timestamp — accurate to the second — into the request payload (e.g. `[System Time: 2026-06-18 21:34:12]`).
+  - The moment you hit send, the extension silently appends a local timestamp — accurate to the second and **tagged with the timezone** — into the request payload (e.g. `[System Time: 2026-06-18 21:34:12 +08:00 (Asia/Shanghai)]`), so the model can convert times correctly across zones.
   - Your chat bubbles stay clean, while the model gains a clear temporal cue that meaningfully improves log triage and schedule reasoning.
 - **🗺️ Interactive Timeline TOC**
   - A "subway-map" style timeline with colored nodes is generated automatically on the right. Click any node to smooth-scroll straight to the matching message.
@@ -37,8 +39,8 @@ ChronoNav tackles both pain points: **it fills in temporal context under the hoo
 
 For a companion tool, safety and compliance come first:
 
-- **Zero data collection**: runs fully locally — nothing is collected, stored, or uploaded.
-- **Minimal requests**: the timestamp travels only with the request you were already sending to `gemini.google.com`, and never talks to any third-party server.
+- **No developer data collection**: no analytics, no tracking, no ads, and no data sent to the developer.
+- **Minimal requests**: the timestamp, UTC offset, and browser time zone travel only with the request you were already sending to `gemini.google.com`; the extension never talks to any third-party server.
 - **No sensitive permissions**: it only injects a content script on `gemini.google.com` to read page DOM; it does not request `tabs`, `cookies`, or sync `storage` permissions.
 
 ## 🚀 Install & Use
@@ -60,5 +62,6 @@ The project keeps a minimal architecture with zero build step:
 - `inject.js`: XHR/Fetch interception responsible for silent time injection.
 - `sidebar.css`: glassmorphism effects, easing animations, and the responsive idle-state layout.
 - `icons/`: extension icon assets (16 / 32 / 48 / 128).
+- `_locales/`: localized UI and store-description strings (en / zh_CN, via `chrome.i18n`).
 
 PRs and issues are welcome. After editing the source, just hit "Reload" on the extensions page and refresh Gemini to see your changes.
