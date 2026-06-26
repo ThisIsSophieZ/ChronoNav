@@ -45,5 +45,69 @@
     "placeholders": {
       "index": { "content": "$1", "example": "3" }
     }
+  },
+  "injectionOn": {
+    "message": "Time context: On",
+    "description": "Sidebar time-context status control label when enabled."
+  },
+  "injectionOff": {
+    "message": "Time context: Off",
+    "description": "Sidebar time-context status control label when disabled."
+  },
+  "injectionOnHint": {
+    "message": "On: your local time is sent to Google with each request. Click to turn off.",
+    "description": "Tooltip when time context is enabled."
+  },
+  "injectionOffHint": {
+    "message": "Off: your Gemini requests are not modified. Click to turn on.",
+    "description": "Tooltip when time context is disabled."
+  },
+  "popupTitle": {
+    "message": "ChronoNav settings",
+    "description": "Popup title."
+  },
+  "popupEnableLabel": {
+    "message": "Time context",
+    "description": "Title of the time-context toggle in the popup."
+  },
+  "popupEnableDesc": {
+    "message": "Adds your local date, time, and UTC offset (e.g. [System Time: 2026-06-18 21:34 +08:00]) to the prompts you send, so Gemini can better understand timing. This is sent to Google with your request. Off by default.",
+    "description": "Description of the time-context toggle in the popup."
+  },
+  "popupPrecisionLabel": {
+    "message": "Time precision",
+    "description": "Title of the precision option in the popup."
+  },
+  "popupPrecisionDesc": {
+    "message": "Minute is gentler on privacy; second helps with log triage.",
+    "description": "Description of the precision option in the popup."
+  },
+  "popupPrecisionMinute": {
+    "message": "Minute (HH:mm)",
+    "description": "Minute-level precision option."
+  },
+  "popupPrecisionSecond": {
+    "message": "Second (HH:mm:ss)",
+    "description": "Second-level precision option."
+  },
+  "popupPrivacyNote": {
+    "message": "Only the time and UTC offset are added — no location, account, or device info, and no third-party servers. Note: hiding it in the UI is cosmetic; the time has already been sent with the request and may be stored by Google.",
+    "description": "Privacy note at the bottom of the popup."
+  },
+  "firstRunTitle": {
+    "message": "ChronoNav: time context is off by default",
+    "description": "First-run notice title."
+  },
+  "firstRunBody": {
+    "message": "When enabled, ChronoNav adds your local date, time, and UTC offset to prompts you send to Gemini, so Gemini can better understand timing. This information is sent to Google as part of your Gemini request and may be stored by Google. You can turn it off anytime from the extension popup or sidebar switch.",
+    "description": "First-run notice body."
+  },
+  "firstRunEnable": {
+    "message": "Turn on time context",
+    "description": "First-run notice enable button."
+  },
+  "firstRunDismiss": {
+    "message": "Not now",
+    "description": "First-run notice dismiss button."
   }
 }

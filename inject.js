@@ -4,9 +4,35 @@
  */
 (function () {
   const EVT = "chrono-nav-prompt-sync";
+  const SETTINGS_EVT = "chrono-nav-settings";
+  const READY_EVT = "chrono-nav-inject-ready";
   const PREFIX_FMT = "[System Time: ";
 
   let lastPrompt = "";
+
+  /**
+   * 注入设置由隔离世界的 content.js 经 chrome.storage 读出后通过事件下发。
+   * 这里默认 fail-closed（enabled=false）：在收到设置前绝不注入，与「默认关」一致，
+   * 也避免设置尚未抵达就偷改了请求。
+   */
+  const settings = { enabled: false, precision: "minute" };
+
+  window.addEventListener(
+    SETTINGS_EVT,
+    (e) => {
+      if (!e || !e.detail) return;
+      if (typeof e.detail.enabled === "boolean") settings.enabled = e.detail.enabled;
+      if (e.detail.precision === "minute" || e.detail.precision === "second") {
+        settings.precision = e.detail.precision;
+      }
+    },
+    true
+  );
+
+  // 通知 content.js：主世界已就绪，请把当前设置发过来（解决脚本加载先后竞态）。
+  try {
+    window.dispatchEvent(new CustomEvent(READY_EVT));
+  } catch (_) {}
 
   /** 仅数字 UTC 偏移（如 +08:00 / -05:00），不含 IANA 城市名，避免暴露具体地区。 */
   function formatTzOffset(d) {
@@ -21,7 +47,7 @@
   function formatPrefix() {
     const d = new Date();
     const pad = (n) => String(n).padStart(2, "0");
-    const ts =
+    let ts =
       d.getFullYear() +
       "-" +
       pad(d.getMonth() + 1) +
@@ -30,9 +56,11 @@
       " " +
       pad(d.getHours()) +
       ":" +
-      pad(d.getMinutes()) +
-      ":" +
-      pad(d.getSeconds());
+      pad(d.getMinutes());
+    // 仅在用户选择秒级精度时附加秒；默认分钟级以降低暴露发送习惯的颗粒度。
+    if (settings.precision === "second") {
+      ts += ":" + pad(d.getSeconds());
+    }
     return PREFIX_FMT + ts + " " + formatTzOffset(d) + "]";
   }
 
@@ -249,6 +277,7 @@
       const contentType = getHeaderValue(init && init.headers, "content-type") || req.headers.get("content-type");
 
       if (
+        !settings.enabled ||
         method === "GET" ||
         method === "HEAD" ||
         !shouldAugment(req.url) ||
@@ -281,6 +310,7 @@
     const contentType = getHeaderValue(mergedInit.headers, "content-type");
 
     if (
+      !settings.enabled ||
       method === "GET" ||
       method === "HEAD" ||
       !shouldAugment(url) ||
@@ -321,6 +351,7 @@
     const contentType = this.__chronoNavContentType || "";
 
     if (
+      !settings.enabled ||
       method === "GET" ||
       method === "HEAD" ||
       !shouldAugment(url) ||

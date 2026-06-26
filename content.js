@@ -7,6 +7,16 @@
 
 (function () {
   const EVT = "chrono-nav-prompt-sync";
+  const SETTINGS_EVT = "chrono-nav-settings";
+  const INJECT_READY_EVT = "chrono-nav-inject-ready";
+  /** chrome.storage.local 键名（跨 popup / content / 主世界共享设置）。 */
+  const SK_ENABLED = "timeInjectionEnabled";
+  const SK_PRECISION = "timePrecision";
+  const SK_FIRST_RUN_DONE = "firstRunNoticeDismissed";
+  const INJECT_TOGGLE_ID = "chrono-nav-inject-toggle";
+  const FIRST_RUN_ID = "chrono-nav-first-run";
+  /** 设置默认值：默认关闭注入（知情同意），精度默认分钟级（隐私更温和）。 */
+  const currentSettings = { enabled: false, precision: "minute" };
   const ROOT_ID = "mate-sidebar";
   const LEGACY_ROOT_ID = "chrono-nav-toc-root";
   const TOC_LIST_ID = "chrono-nav-toc-list";
@@ -109,6 +119,68 @@
       { once: true }
     );
   }
+
+  /** ---------- 注入设置桥接（chrome.storage ⇄ 主世界 inject.js） ---------- */
+
+  /** 把当前设置下发给主世界（inject.js 监听 SETTINGS_EVT）。 */
+  function sendSettingsToInject() {
+    try {
+      window.dispatchEvent(
+        new CustomEvent(SETTINGS_EVT, {
+          detail: { enabled: currentSettings.enabled, precision: currentSettings.precision },
+        })
+      );
+    } catch (_) {}
+  }
+
+  /** 从 chrome.storage.local 读取设置；不可用时退回默认（关闭/分钟）。 */
+  function loadSettings(cb) {
+    try {
+      chrome.storage.local.get([SK_ENABLED, SK_PRECISION], (res) => {
+        currentSettings.enabled = res && res[SK_ENABLED] === true;
+        currentSettings.precision = res && res[SK_PRECISION] === "second" ? "second" : "minute";
+        if (cb) cb();
+      });
+    } catch (_) {
+      if (cb) cb();
+    }
+  }
+
+  function setInjectionEnabled(next) {
+    try {
+      chrome.storage.local.set({ [SK_ENABLED]: !!next });
+    } catch (_) {}
+  }
+
+  // 主世界就绪即把当前设置发过去（避免脚本加载先后竞态导致首发请求漏设置）。
+  window.addEventListener(
+    INJECT_READY_EVT,
+    () => {
+      loadSettings(sendSettingsToInject);
+    },
+    true
+  );
+
+  // 设置在别处（popup / 另一标签页 / 侧栏开关）变更时，实时同步到本页与主世界。
+  try {
+    chrome.storage.onChanged.addListener((changes, area) => {
+      if (area !== "local") return;
+      let touched = false;
+      if (Object.prototype.hasOwnProperty.call(changes, SK_ENABLED)) {
+        currentSettings.enabled = changes[SK_ENABLED].newValue === true;
+        touched = true;
+      }
+      if (Object.prototype.hasOwnProperty.call(changes, SK_PRECISION)) {
+        currentSettings.precision =
+          changes[SK_PRECISION].newValue === "second" ? "second" : "minute";
+        touched = true;
+      }
+      if (touched) {
+        sendSettingsToInject();
+        updateInjectStatusUI();
+      }
+    });
+  } catch (_) {}
 
   function syncPromptText(text) {
     window.dispatchEvent(
@@ -630,6 +702,14 @@
     const chevronDown =
       '<svg class="mate-nav-chevron" viewBox="0 0 24 24" width="22" height="22" aria-hidden="true"><polyline points="7 9 12 14 17 9" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg>';
     return (
+      '<div class="mate-nav-top">' +
+      `<button type="button" class="chrono-nav-inject-status" id="${INJECT_TOGGLE_ID}" aria-pressed="false">` +
+      '<svg class="chrono-nav-inject-icon" viewBox="0 0 24 24" width="18" height="18" aria-hidden="true">' +
+      '<circle cx="12" cy="12" r="8.5" fill="none" stroke="currentColor" stroke-width="1.8"/>' +
+      '<path d="M12 7.4V12l3.1 1.9" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>' +
+      "</svg>" +
+      "</button>" +
+      "</div>" +
       '<div class="mate-nav-up">' +
       `<button type="button" class="mate-nav-step" id="${FAB_UP_ID}" aria-label="${t("prevMessage")}">${chevronUp}</button>` +
       "</div>" +
@@ -919,6 +999,74 @@
     } catch (_) {}
   }
 
+  /** 同步侧栏时钟图标的点亮/灰显状态、悬停提示与无障碍状态。 */
+  function updateInjectStatusUI() {
+    const btn = document.getElementById(INJECT_TOGGLE_ID);
+    if (!btn) return;
+    const on = currentSettings.enabled;
+    btn.classList.toggle("is-on", on);
+    btn.classList.toggle("is-off", !on);
+    btn.setAttribute("aria-pressed", on ? "true" : "false");
+    const label = on ? t("injectionOn") : t("injectionOff");
+    btn.setAttribute("aria-label", label);
+    // 悬停原生提示：显示 "Time context: On/Off"。
+    btn.setAttribute("title", label);
+  }
+
+  function bindInjectToggle(root) {
+    const btn = root.querySelector(`#${INJECT_TOGGLE_ID}`);
+    if (!btn || btn.dataset.bound === "1") return;
+    btn.dataset.bound = "1";
+    btn.addEventListener("click", (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      setInjectionEnabled(!currentSettings.enabled);
+    });
+    updateInjectStatusUI();
+  }
+
+  /**
+   * 首次运行引导：时钟做几下柔光脉冲吸引注意，并在其旁弹出指向它的小气泡，
+   * 明确告知「会把本地时间随请求发给 Google」以及在哪里开关。仅在未关闭过时显示。
+   */
+  function maybeShowFirstRunNotice() {
+    try {
+      chrome.storage.local.get([SK_FIRST_RUN_DONE], (res) => {
+        if (res && res[SK_FIRST_RUN_DONE]) return;
+        if (document.getElementById(FIRST_RUN_ID)) return;
+        const top = document.querySelector("#" + ROOT_ID + " .mate-nav-top");
+        if (!top) return;
+        const clock = document.getElementById(INJECT_TOGGLE_ID);
+        if (clock) clock.classList.add("chrono-attn");
+
+        const box = document.createElement("div");
+        box.id = FIRST_RUN_ID;
+        box.setAttribute("role", "dialog");
+        box.setAttribute("aria-label", t("firstRunTitle"));
+        box.innerHTML =
+          `<div class="chrono-fr-title">${t("firstRunTitle")}</div>` +
+          `<div class="chrono-fr-body">${t("firstRunBody")}</div>` +
+          '<div class="chrono-fr-actions">' +
+          `<button type="button" class="chrono-fr-enable">${t("firstRunEnable")}</button>` +
+          `<button type="button" class="chrono-fr-dismiss">${t("firstRunDismiss")}</button>` +
+          "</div>";
+        const close = () => {
+          try {
+            chrome.storage.local.set({ [SK_FIRST_RUN_DONE]: true });
+          } catch (_) {}
+          if (clock) clock.classList.remove("chrono-attn");
+          box.remove();
+        };
+        box.querySelector(".chrono-fr-enable").addEventListener("click", () => {
+          setInjectionEnabled(true);
+          close();
+        });
+        box.querySelector(".chrono-fr-dismiss").addEventListener("click", close);
+        top.appendChild(box);
+      });
+    } catch (_) {}
+  }
+
   function ensureTocRoot() {
     let root = document.getElementById(ROOT_ID);
     if (root) {
@@ -927,6 +1075,7 @@
       applyCollapsedState(root, isTocCollapsed());
       bindIdleAutoCollapse(root);
       bindStepNav(root);
+      bindInjectToggle(root);
       ensureSidebarA11y(root);
       applySidebarTheme(root);
       return root;
@@ -942,6 +1091,7 @@
     applyCollapsedState(root, isTocCollapsed());
     bindIdleAutoCollapse(root);
     bindStepNav(root);
+    bindInjectToggle(root);
     ensureSidebarA11y(root);
     applySidebarTheme(root);
     return root;
@@ -966,7 +1116,7 @@
     lastTocSignature = signature;
     ul.innerHTML = "";
     if (!nodes.length) {
-      // 主页 / 新对话等无用户消息场景：整体隐藏侧栏，不显示毛玻璃外壳与箭头。
+      // 主页 / 新对话等无用户消息：仅保留顶部时钟（CSS .is-empty），大纲与箭头隐藏。
       root.classList.add("is-empty");
       const li = document.createElement("li");
       li.className = "chrono-nav-toc-item chrono-nav-toc-empty";
@@ -1075,11 +1225,16 @@
   function boot() {
     // 构建标记：刷新 Gemini 后控制台若能看到该行，说明已加载到最新 content script（用于排查"扩展没真正重载"）。
     try {
-      console.info("[ChronoNav] content build 2026-06-26b loaded");
+      console.info("[ChronoNav] content build 2026-06-26g loaded");
     } catch (_) {}
     bindInputSync();
     startTocObserver();
     startThemeWatcher();
+    loadSettings(() => {
+      sendSettingsToInject();
+      updateInjectStatusUI();
+      maybeShowFirstRunNotice();
+    });
   }
 
   if (document.readyState === "loading") {
