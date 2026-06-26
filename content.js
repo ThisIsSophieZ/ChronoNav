@@ -73,9 +73,13 @@
   let tocBootstrapped = false;
   let prevUserNodeCount = 0;
 
-  /** 与 inject.js 一致：[System Time: YYYY-MM-DD HH:mm:ss (可选时区后缀)]，允许前缀前空白与 ] 后换行 */
-  const SYSTEM_TIME_PREFIX_RE =
-    /^\s*\[System Time:\s*(\d{4})-(\d{2})-(\d{2})\s+(\d{2}):(\d{2}):(\d{2})[^\]]*\]\s*\n?/i;
+  /**
+   * 容忍方括号内任意内容（日期时间、时区后缀等都可变）。刻意「不」行首锚定：
+   * 刷新后的历史气泡聚合文本开头可能带换行 / UI 文本，锚定会匹配失败导致既不隐藏也不解析时间。
+   * 这里用「任意位置匹配」+ 全局版本，配合 SYSTEM_TIME_ONLY_RE 判定「整段仅为前缀」的块级元素。
+   */
+  const SYSTEM_TIME_FIND_RE = /\[System Time:[^\]]*\]/i;
+  const SYSTEM_TIME_FIND_GLOBAL_RE = /\[System Time:[^\]]*\]\s*\n?/gi;
 
   /** chrome.i18n 包装：取本地化文案；缺失键或异常（如非扩展环境）时回退到 key 本身。 */
   function t(key, subs) {
@@ -175,7 +179,7 @@
    */
   function parseLeadingSystemTime(raw) {
     const s = String(raw || "");
-    const m = s.match(SYSTEM_TIME_PREFIX_RE);
+    const m = s.match(SYSTEM_TIME_FIND_RE);
     if (!m) {
       return {
         hadStamp: false,
@@ -183,8 +187,11 @@
         stripped: s.replace(/\s+/g, " ").trim(),
       };
     }
-    const hhmm = `${m[4]}:${m[5]}`;
-    const rest = s.slice(m[0].length);
+    // 从匹配到的前缀段里尽量提取 HH:mm（首个「时:分」）。日期段无冒号，时区 +08:00 在其后，故首个即为时刻。
+    const timeMatch = m[0].match(/(\d{1,2}):(\d{2})/);
+    const hhmm = timeMatch ? `${timeMatch[1].padStart(2, "0")}:${timeMatch[2]}` : null;
+    // 去掉文本中所有 [System Time: ...] 段（不限位置），其余即为正文。
+    const rest = s.replace(SYSTEM_TIME_FIND_GLOBAL_RE, " ");
     return {
       hadStamp: true,
       hhmm,
@@ -200,53 +207,70 @@
     return (inner ? inner.innerText : el.innerText) || el.textContent || "";
   }
 
+  /** 元素的整段文本是否「只有」[System Time: ...]（即前缀独占一个块级元素 / 一行，如 Gemini 的 <p class="query-text-line">）。 */
+  const SYSTEM_TIME_ONLY_RE = /^\s*\[System Time:[^\]]*\]\s*$/i;
+
   /**
-   * 若主聊天区回显了 [System Time: ...]，从 DOM 中剥离，避免用户看到。
+   * 把主聊天区回显的 [System Time: ...] 从可见 UI 中隐藏，避免用户看到明文。
+   *
+   * 关键修正：刻意「不」做行首锚定守卫。刷新后的历史气泡聚合 innerText 开头常带换行 / 前置内容，
+   * 旧的 `^\s*\[System Time:` 守卫会匹配失败而整体提前返回 —— 这正是「<p> 没被隐藏、TOC 时间也丢」的真因。
+   *
+   * 现在直接「全子树扫描」：命中「整段仅为前缀」的块级元素就用内联 display:none 隐藏
+   * （改样式而非文本，Angular 重渲染文本时不接管我们的 inline style，能扛住反复水合）。
+   * 只有当前缀与正文同处一个元素（<br> 软换行）时，才退回删除前缀文本节点。
    */
   function stripSystemTimePrefixFromDom(userEl) {
-    if (!userEl || userEl.dataset.chronoUiPrefixStripped === "1") return;
+    if (!userEl || !userEl.querySelectorAll) return;
+
+    // 策略 A：隐藏「整段仅为前缀」的块级元素（不依赖聚合文本是否以前缀开头）。
+    let hidByElement = false;
+    const candidates = userEl.querySelectorAll("p, div, span, li, pre, code, blockquote");
+    for (const el of candidates) {
+      if (!SYSTEM_TIME_ONLY_RE.test(el.textContent || "")) continue;
+      // 若它内部还套着更深的「纯前缀」元素，跳过外层、只隐藏最内层那个，减少误伤。
+      if (
+        Array.prototype.some.call(el.children, (c) => SYSTEM_TIME_ONLY_RE.test(c.textContent || ""))
+      ) {
+        continue;
+      }
+      el.style.setProperty("display", "none", "important");
+      el.setAttribute("data-chrono-sys-hidden", "1");
+      hidByElement = true;
+    }
+    if (hidByElement) return;
+
+    // 策略 B（兜底）：前缀与正文在同一元素（<br> 软换行）——删掉文本节点里的前缀段（不限位置）。
     const inner =
       userEl.querySelector("div.query-content") ||
       userEl.querySelector('[data-content="user-message"]') ||
       userEl.querySelector("message-content") ||
       userEl;
     const raw = inner.innerText != null ? inner.innerText : inner.textContent || "";
-    if (!SYSTEM_TIME_PREFIX_RE.test(raw)) return;
+    if (!SYSTEM_TIME_FIND_RE.test(raw)) return;
 
     function stripFromTextNode(textNode) {
       const t = textNode.textContent || "";
-      const m = t.match(SYSTEM_TIME_PREFIX_RE);
+      const local = new RegExp(SYSTEM_TIME_FIND_RE.source + "\\s*\\n?", "i");
+      const m = t.match(local);
       if (!m) return false;
-      textNode.textContent = t.slice(m[0].length);
+      textNode.textContent = t.slice(0, m.index) + t.slice(m.index + m[0].length);
       return true;
     }
 
     function walk(el) {
+      let changed = false;
       for (const child of el.childNodes) {
         if (child.nodeType === Node.TEXT_NODE) {
-          if (stripFromTextNode(child)) return true;
+          if (stripFromTextNode(child)) changed = true;
         } else if (child.nodeType === Node.ELEMENT_NODE) {
-          if (walk(child)) return true;
+          if (walk(child)) changed = true;
         }
       }
-      return false;
+      return changed;
     }
 
-    if (walk(inner)) {
-      userEl.dataset.chronoUiPrefixStripped = "1";
-      return;
-    }
-
-    const normalized = raw.replace(/\s+/g, " ").trim();
-    const parsed = parseLeadingSystemTime(normalized);
-    if (parsed.hadStamp) {
-      if (inner.innerText != null) {
-        inner.innerText = parsed.stripped;
-      } else {
-        inner.textContent = parsed.stripped;
-      }
-      userEl.dataset.chronoUiPrefixStripped = "1";
-    }
+    walk(inner);
   }
 
   function getPrimaryEditor() {
@@ -928,6 +952,12 @@
     const ul = root.querySelector(`#${TOC_LIST_ID}`);
     if (!ul) return false;
     const nodes = findUserMessageNodes();
+    // 关键顺序：必须「先读含前缀的原文解析时间，再剥离 DOM」。
+    // 否则剥离后 DOM 里的 [System Time: ...] 已消失，刷新历史时（无 pending / 无缓存）时间就会丢成空。
+    const rows = nodes.map((node) => {
+      const raw = getRawMessageText(node);
+      return { node, raw, parsed: parseLeadingSystemTime(raw), pendingHhmm: null };
+    });
     for (let i = 0; i < nodes.length; i++) {
       stripSystemTimePrefixFromDom(nodes[i]);
     }
@@ -951,10 +981,6 @@
       return true;
     }
     root.classList.remove("is-empty");
-    const rows = nodes.map((node) => {
-      const raw = getRawMessageText(node);
-      return { node, raw, parsed: parseLeadingSystemTime(raw), pendingHhmm: null };
-    });
     assignPendingTimesToRows(rows);
     prevUserNodeCount = nodes.length;
     tocBootstrapped = true;
@@ -1040,11 +1066,17 @@
     ensureTocRoot();
     const target = getChatRoot();
     const obs = new MutationObserver(() => scheduleToc());
-    obs.observe(target, { childList: true, subtree: true });
+    // characterData 必不可少：刷新时 Gemini 常先插入气泡、再用文本节点更新（characterData）把
+    // 带 [System Time:] 的历史正文水合回来。只监听 childList 会漏掉这一步，导致前缀重新泄漏到明文。
+    obs.observe(target, { childList: true, subtree: true, characterData: true });
     scheduleToc();
   }
 
   function boot() {
+    // 构建标记：刷新 Gemini 后控制台若能看到该行，说明已加载到最新 content script（用于排查"扩展没真正重载"）。
+    try {
+      console.info("[ChronoNav] content build 2026-06-26b loaded");
+    } catch (_) {}
     bindInputSync();
     startTocObserver();
     startThemeWatcher();

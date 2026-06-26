@@ -8,6 +8,7 @@
 
   let lastPrompt = "";
 
+  /** 仅数字 UTC 偏移（如 +08:00 / -05:00），不含 IANA 城市名，避免暴露具体地区。 */
   function formatTzOffset(d) {
     // getTimezoneOffset() 返回 UTC - 本地（分钟），东区为负，故取反
     const offsetMin = -d.getTimezoneOffset();
@@ -15,14 +16,6 @@
     const abs = Math.abs(offsetMin);
     const pad = (n) => String(n).padStart(2, "0");
     return sign + pad(Math.floor(abs / 60)) + ":" + pad(abs % 60);
-  }
-
-  function getIanaZone() {
-    try {
-      return Intl.DateTimeFormat().resolvedOptions().timeZone || "";
-    } catch (e) {
-      return "";
-    }
   }
 
   function formatPrefix() {
@@ -40,9 +33,7 @@
       pad(d.getMinutes()) +
       ":" +
       pad(d.getSeconds());
-    const zone = getIanaZone();
-    const tzSuffix = " " + formatTzOffset(d) + (zone ? " (" + zone + ")" : "");
-    return PREFIX_FMT + ts + tzSuffix + "]";
+    return PREFIX_FMT + ts + " " + formatTzOffset(d) + "]";
   }
 
   function normalizeText(text) {
