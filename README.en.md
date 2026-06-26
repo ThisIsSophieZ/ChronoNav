@@ -1,71 +1,109 @@
-# ⏱️ ChronoNav
+# ⏱️ ChronoNav — Timeline for Gemini
 
 [简体中文](./README.md) · **English**
 
-**Give Gemini a real sense of time, and take back control of long conversations.**
+> Give Gemini real time-awareness, and turn long conversations into a one-click timeline.
 
-ChronoNav is a lightweight Chrome extension built for the Gemini web app. When enabled, it anchors your local system time onto every prompt you send (**off by default — opt in, toggle any time**), while rendering an elegant, fully interactive conversation timeline (Timeline TOC) on the right edge of the page.
+ChronoNav is a lightweight Chrome extension for the [Gemini web app](https://gemini.google.com/) that does two things:
+
+1. **Time context (optional, off by default)** — when enabled, it adds your local time and UTC offset in front of the prompt inside the request your browser already sends to Gemini, so the model can reason about "how long ago" and "what time is it now."
+2. **Conversation timeline (Timeline TOC)** — a "subway-map" of colored nodes on the right edge of the page; click any node to smooth-scroll to that message.
 
 ChronoNav is an independent extension and is not affiliated with, endorsed by, or sponsored by Google or Gemini.
 
-If you run cross-session DevOps investigations, long-threaded debugging, or frequently lose context in conversations that span hundreds of screens, this extension is made for you.
+---
 
-## 💡 Why build it?
+## 💡 Why build it
 
-Large language models are smart, but they often lack a real sense of time.
+LLMs are smart but usually lack a real sense of time. In long-running tasks this creates subtle disconnects: the model can't reliably order "the error half an hour ago," "last night's plan," and "the current state." And once a chat runs dozens of turns deep, scrolling to relocate context simply doesn't scale.
 
-This creates subtle disconnects in long-running tasks: the model can't reliably relate "the error half an hour ago," "last night's plan," and "the current state." And once a conversation runs dozens of turns deep, scrolling around to relocate key context simply doesn't scale.
+ChronoNav tackles both: **it fills in temporal context under the hood, and reshapes long-conversation navigation on the surface.**
 
-ChronoNav tackles both pain points: **it fills in temporal context under the hood, and reshapes long-conversation navigation on the surface.**
+---
 
 ## ✨ Core Features
 
-- **⏳ Time Context (off by default, toggleable)**
-  - When enabled, the extension appends a local timestamp tagged with a **numeric UTC offset** only (e.g. `+08:00` — no IANA city name or location) into the request payload, so the model can convert times correctly across zones.
-  - Choose your precision: **minute** (default, `[System Time: 2026-06-18 21:34 +08:00]`, gentler on privacy) or **second** (`[System Time: 2026-06-18 21:34:12 +08:00]`, better for log triage).
-  - Transparent and in your control: off by default with a first-run notice; toggle any time from the extension popup or the "Time context: On/Off" status control in the sidebar.
-  - Your chat bubbles stay clean while the model gains a temporal cue. Note: hiding it in the UI is cosmetic — the time has already been sent with the request and may be stored by Google.
-- **🗺️ Interactive Timeline TOC**
-  - A "subway-map" style timeline with colored nodes is generated automatically on the right. Click any node to smooth-scroll straight to the matching message.
-  - Active item tracking: as you scroll the main page, the sidebar highlights and centers the conversation node currently in view.
-- **🖱️ Step-by-Step Navigation**
-  - Minimalist up/down arrows sit at both ends of the sidebar, letting you jump one message at a time between adjacent context blocks — no more scroll-wheel fatigue.
-- **🎨 Restrained, Breathing UI (Glassmorphism & Idle State)**
-  - Adapts seamlessly to Gemini's native light/dark themes.
-  - Idle state: when your cursor leaves, the sidebar collapses into a minimal column of colored dots pinned to the right edge, staying out of your way; hover to expand it smoothly, with the send time surfacing right where you need it.
-- **⌨️ A11y Semantics**
-  - The sidebar is marked as a navigation landmark (`role="navigation"`), and items and arrows carry readable names (`aria-label`).
-  - Keyboard friendly: when focus enters the sidebar, the idle state expands automatically.
+### ⏳ Time Context
+
+- **Off by default, opt-in**: informed consent first — it never silently modifies your prompts.
+- **One switch, two entry points**: the extension popup, or the clock icon at the top of the sidebar (lit = on, gray = off).
+- **Choose precision**: minute (default, `[System Time: 2026-06-18 21:34 +08:00]`, gentler on privacy) or second (`…21:34:12…`, better for log triage).
+- **Minimal data**: only a timestamp + numeric UTC offset — **no IANA city name, location, account, or device info**.
+- **Off means clean**: turning it off stops injection and hides every time in the sidebar (including historical parsed ones), leaving only nodes and text; toggle back on and times reappear.
+- **Transparent, not "invisible"**: hiding the prefix in the UI is cosmetic — the time has already been sent with the request and may be stored by Google. A first-run notice makes this explicit.
+
+### 🗺️ Interactive Timeline TOC
+
+- A timeline of colored nodes is generated automatically on the right; click any node to smooth-scroll to that message.
+- Active item tracking: as you scroll the main page, the sidebar highlights and centers the message currently in view.
+
+### 🖱️ Step-by-Step Navigation
+
+- Minimalist up/down arrows at both ends let you jump one message at a time — no scroll-wheel fatigue.
+
+### 🎨 Restrained, Breathing UI
+
+- Follows Gemini's native light/dark themes.
+- Idle state: when the cursor leaves, the sidebar collapses into a minimal column of colored dots pinned to the right edge; hover to expand smoothly.
+
+### ⌨️ Accessibility
+
+- The sidebar is a navigation landmark (`role="navigation"`); items and arrows carry readable names (`aria-label`).
+- Keyboard friendly: the idle state expands when focus enters the sidebar.
+
+---
 
 ## 🛡️ Data Safety (Zero Tracking)
 
-For a companion tool, safety and compliance come first:
+- **No developer data collection**: no analytics, no tracking, no ads, nothing sent to the developer.
+- **Off by default & transparent**: time context is disabled until you opt in; it isn't dressed up as "fully invisible / risk-free."
+- **Minimal requests**: when enabled, only the timestamp and a numeric UTC offset travel with the request you were already sending to `gemini.google.com`; no third-party servers. Be aware this time does go to Google and may be stored by it.
+- **Restrained permissions**: a content script runs only on `gemini.google.com` to read the page DOM, plus the non-sensitive `storage` permission to save local preferences (toggle / precision); no `tabs`, `cookies`, or sync `storage`.
 
-- **No developer data collection**: no analytics, no tracking, no ads, and no data sent to the developer.
-- **Off by default & transparent**: time context is disabled until you opt in; we don't pretend it's "fully invisible/risk-free."
-- **Minimal requests**: when enabled, only the timestamp and a numeric UTC offset (no location/account/device) travel with the request you were already sending to `gemini.google.com`; the extension never talks to any third-party server. Be aware this time does go to Google and may be stored by it.
-- **Restrained permissions**: it injects a content script on `gemini.google.com` to read page DOM, and uses the non-sensitive `storage` permission only to save local preferences (toggle/precision); it does not request `tabs`, `cookies`, or sync `storage` permissions.
+See the [privacy policy](./PRIVACY.md) for details.
+
+---
 
 ## 🚀 Install & Use
 
-The project currently runs via Developer Mode:
+### Load in Developer Mode
 
 1. Clone or download this repository.
 2. Open `chrome://extensions/` in Chrome.
-3. Enable **Developer mode** in the top-right corner.
-4. Click **Load unpacked** and select the project root that contains `manifest.json`.
-5. Refresh the [Gemini web app](https://gemini.google.com/), and the breathing timeline outline will appear on the right.
+3. Enable **Developer mode** (top-right).
+4. Click **Load unpacked** and select the project root containing `manifest.json`.
+5. Refresh the [Gemini web app](https://gemini.google.com/) — the timeline outline appears on the right.
+
+> Time context is **off by default**. Turn it on from the popup or the clock at the top of the sidebar when you need it.
+
+### Build a store ZIP
+
+```powershell
+powershell -ExecutionPolicy Bypass -File .\scripts\package.ps1
+```
+
+The script packages only runtime files (`manifest.json`, `content.js`, `inject.js`, `sidebar.css`, `popup.*`, `icons/`, `_locales/`) into `dist/`, with `manifest.json` at the ZIP root as required by the Chrome Web Store.
+
+---
 
 ## 📁 Architecture & Development
 
-The project keeps a minimal architecture with zero build step:
+A minimal architecture with zero build step:
 
-- `manifest.json`: MV3 base configuration.
-- `content.js`: DOM parsing, outline generation, scroll tracking, the UI state machine, and the settings bridge (chrome.storage ⇄ main world).
-- `inject.js`: XHR/Fetch interception responsible for time-context injection (gated by the toggle/precision, fail-closed off by default).
-- `popup.html` / `popup.js` / `popup.css`: the settings page (time-context toggle, precision, purpose explanation).
-- `sidebar.css`: glassmorphism effects, easing animations, the responsive idle-state layout, plus the time-context status control and first-run notice.
-- `icons/`: extension icon assets (16 / 32 / 48 / 128).
-- `_locales/`: localized UI and store-description strings (en / zh_CN, via `chrome.i18n`).
+| File | Responsibility |
+| --- | --- |
+| `manifest.json` | MV3 base config (incl. `action` popup, `storage` permission). |
+| `content.js` | DOM parsing, outline generation, scroll tracking, UI state machine, and the settings bridge (`chrome.storage` ⇄ main world). |
+| `inject.js` | XHR/Fetch interception for time-context injection (gated by toggle/precision, fail-closed off by default). |
+| `popup.html` / `popup.js` / `popup.css` | Settings page: time-context toggle, precision, purpose explanation. |
+| `sidebar.css` | Glassmorphism, animations, idle-state layout, clock status control, and first-run notice styles. |
+| `icons/` | Extension icons (16 / 32 / 48 / 128). |
+| `_locales/` | Localized UI and store strings (en / zh_CN, via `chrome.i18n`). |
 
-PRs and issues are welcome. After editing the source, just hit "Reload" on the extensions page and refresh Gemini to see your changes.
+PRs and [issues](https://github.com/ThisIsSophieZ/ChronoNav-Timeline-for-Gemini/issues) are welcome. After editing the source, hit "Reload" on the extensions page and refresh Gemini.
+
+---
+
+## 📄 License
+
+[MIT](./LICENSE) © ThisIsSophieZ

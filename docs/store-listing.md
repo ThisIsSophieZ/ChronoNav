@@ -160,17 +160,17 @@ The extension uses chrome.storage.local only to persist the user's local feature
 
 - 推荐（零配置，先确认仓库公开且默认分支确实为 `master`；如果默认分支是 `main`，请改成 `/blob/main/PRIVACY.md`）：
   ```
-  https://github.com/ThisIsSophieZ/Gemini-ChronoNav/blob/master/PRIVACY.md
+  https://github.com/ThisIsSophieZ/ChronoNav-Timeline-for-Gemini/blob/master/PRIVACY.md
   ```
 - 更正式（如开启 GitHub Pages）：
   ```
-  https://thisissophiez.github.io/Gemini-ChronoNav/privacy
+  https://thisissophiez.github.io/ChronoNav-Timeline-for-Gemini/privacy
   ```
 
 ---
 
 ## 11. Other fields / 其他字段
 
-- Official URL / 官网：`https://github.com/ThisIsSophieZ/Gemini-ChronoNav`
-- Support / 支持：`https://github.com/ThisIsSophieZ/Gemini-ChronoNav/issues`
+- Official URL / 官网：`https://github.com/ThisIsSophieZ/ChronoNav-Timeline-for-Gemini`
+- Support / 支持：`https://github.com/ThisIsSophieZ/ChronoNav-Timeline-for-Gemini/issues`
 - 联系邮箱：在 Developer Dashboard 账号设置中填写并完成验证（商店必填）。

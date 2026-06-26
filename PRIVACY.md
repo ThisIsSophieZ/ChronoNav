@@ -85,7 +85,7 @@ revised "Last updated" date.
 ### Contact
 
 Questions or concerns? Please open an issue:
-<https://github.com/ThisIsSophieZ/Gemini-ChronoNav/issues>
+<https://github.com/ThisIsSophieZ/ChronoNav-Timeline-for-Gemini/issues>
 
 ---
 
@@ -153,4 +153,4 @@ Gemini 请求一同发送外，本扩展的处理均在你的浏览器本地完�
 ### 联系方式
 
 如有疑问，请提交 issue：
-<https://github.com/ThisIsSophieZ/Gemini-ChronoNav/issues>
+<https://github.com/ThisIsSophieZ/ChronoNav-Timeline-for-Gemini/issues>

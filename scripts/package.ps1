@@ -71,7 +71,7 @@ foreach ($d in $includeDirs) {
 }
 
 # Create the ZIP (manifest.json at archive root).
-$zipName = "gemini-chrononav-v$version.zip"
+$zipName = "chrononav-timeline-for-gemini-v$version.zip"
 $zipPath = Join-Path $OutputDir $zipName
 if (Test-Path $zipPath) { Remove-Item -Force $zipPath }
 
