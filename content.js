@@ -1001,11 +1001,15 @@
     } catch (_) {}
   }
 
-  /** 同步侧栏时钟图标的点亮/灰显状态、悬停提示与无障碍状态。 */
+  /** 同步侧栏时钟图标的点亮/灰显状态、悬停提示、无障碍状态，以及 TOC 时间显隐。 */
   function updateInjectStatusUI() {
+    const on = currentSettings.enabled;
+    // 关闭时给侧栏根节点挂 time-context-off：CSS 据此隐藏所有 TOC 时间（含历史已解析的）。
+    // 时间数据仍保留在 meta/缓存里，开回来即恢复显示。
+    const root = document.getElementById(ROOT_ID);
+    if (root) root.classList.toggle("time-context-off", !on);
     const btn = document.getElementById(INJECT_TOGGLE_ID);
     if (!btn) return;
-    const on = currentSettings.enabled;
     btn.classList.toggle("is-on", on);
     btn.classList.toggle("is-off", !on);
     btn.setAttribute("aria-pressed", on ? "true" : "false");
@@ -1227,7 +1231,7 @@
   function boot() {
     // 构建标记：刷新 Gemini 后控制台若能看到该行，说明已加载到最新 content script（用于排查"扩展没真正重载"）。
     try {
-      console.info("[ChronoNav] content build 2026-06-26g loaded");
+      console.info("[ChronoNav] content build 2026-06-26h loaded");
     } catch (_) {}
     bindInputSync();
     startTocObserver();

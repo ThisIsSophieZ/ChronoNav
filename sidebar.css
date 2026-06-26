@@ -483,6 +483,12 @@
   overflow: hidden;
 }
 
+/* 时间上下文关闭：隐藏所有 TOC 时间（含历史已解析、含 hover/active 浮现），
+   仅留珍珠节点 + 文本。时间数据仍保留在内存/缓存，开回来即恢复。 */
+#mate-sidebar.time-context-off .chrono-nav-toc-time {
+  display: none !important;
+}
+
 .chrono-nav-toc-label {
   display: block;
   font-size: 13px;
