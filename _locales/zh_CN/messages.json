@@ -1,6 +1,6 @@
 {
   "appDesc": {
-    "message": "为 Gemini 网页聊天注入系统时间锚点，并提供右侧对话大纲导航。",
+    "message": "可选为 Gemini 提示词附加本地时间（默认关闭），并提供右侧对话时间线导航。",
     "description": "扩展在 Chrome 网上应用店与扩展页显示的描述。"
   },
   "sidebarLabel": {

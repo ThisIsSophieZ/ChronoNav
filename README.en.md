@@ -100,7 +100,7 @@ A minimal architecture with zero build step:
 | `icons/` | Extension icons (16 / 32 / 48 / 128). |
 | `_locales/` | Localized UI and store strings (en / zh_CN, via `chrome.i18n`). |
 
-PRs and [issues](https://github.com/ThisIsSophieZ/ChronoNav-Timeline-for-Gemini/issues) are welcome. After editing the source, hit "Reload" on the extensions page and refresh Gemini.
+PRs and [issues](https://github.com/ThisIsSophieZ/ChronoNav/issues) are welcome. After editing the source, hit "Reload" on the extensions page and refresh Gemini.
 
 ---
 

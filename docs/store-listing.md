@@ -22,13 +22,13 @@
 
 English (1 选):
 ```
-Anchor real local time to every Gemini prompt, and navigate long chats with an elegant message timeline.
+Optionally add your local time to Gemini prompts (off by default), and navigate long chats with an elegant timeline.
 ```
-（约 104 字符）
+（约 114 字符）
 
 简体中文:
 ```
-为每条 Gemini 消息注入本地真实时间，并用优雅的对话时间线快速导航长对话。
+可选为 Gemini 提示词附加本地时间（默认关闭），并用优雅的对话时间线快速导航长对话。
 ```
 
 ---
@@ -160,17 +160,17 @@ The extension uses chrome.storage.local only to persist the user's local feature
 
 - 推荐（零配置，先确认仓库公开且默认分支确实为 `master`；如果默认分支是 `main`，请改成 `/blob/main/PRIVACY.md`）：
   ```
-  https://github.com/ThisIsSophieZ/ChronoNav-Timeline-for-Gemini/blob/master/PRIVACY.md
+  https://github.com/ThisIsSophieZ/ChronoNav/blob/master/PRIVACY.md
   ```
 - 更正式（如开启 GitHub Pages）：
   ```
-  https://thisissophiez.github.io/ChronoNav-Timeline-for-Gemini/privacy
+  https://thisissophiez.github.io/ChronoNav/privacy
   ```
 
 ---
 
 ## 11. Other fields / 其他字段
 
-- Official URL / 官网：`https://github.com/ThisIsSophieZ/ChronoNav-Timeline-for-Gemini`
-- Support / 支持：`https://github.com/ThisIsSophieZ/ChronoNav-Timeline-for-Gemini/issues`
+- Official URL / 官网：`https://github.com/ThisIsSophieZ/ChronoNav`
+- Support / 支持：`https://github.com/ThisIsSophieZ/ChronoNav/issues`
 - 联系邮箱：在 Developer Dashboard 账号设置中填写并完成验证（商店必填）。

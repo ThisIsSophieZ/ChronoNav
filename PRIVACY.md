@@ -1,7 +1,7 @@
 # Privacy Policy / 隐私政策
 
 **Extension / 扩展名称:** ChronoNav - Timeline for Gemini
-**Last updated / 最后更新:** 2026-06-22
+**Last updated / 最后更新:** 2026-06-26
 
 [English](#english) · [简体中文](#简体中文)
 
@@ -85,7 +85,7 @@ revised "Last updated" date.
 ### Contact
 
 Questions or concerns? Please open an issue:
-<https://github.com/ThisIsSophieZ/ChronoNav-Timeline-for-Gemini/issues>
+<https://github.com/ThisIsSophieZ/ChronoNav/issues>
 
 ---
 
@@ -153,4 +153,4 @@ Gemini 请求一同发送外，本扩展的处理均在你的浏览器本地完�
 ### 联系方式
 
 如有疑问，请提交 issue：
-<https://github.com/ThisIsSophieZ/ChronoNav-Timeline-for-Gemini/issues>
+<https://github.com/ThisIsSophieZ/ChronoNav/issues>

@@ -100,7 +100,7 @@ powershell -ExecutionPolicy Bypass -File .\scripts\package.ps1
 | `icons/` | 扩展图标（16 / 32 / 48 / 128）。 |
 | `_locales/` | 界面与商店文案多语言（en / zh_CN，基于 `chrome.i18n`）。 |
 
-欢迎提交 PR 或 [Issue](https://github.com/ThisIsSophieZ/ChronoNav-Timeline-for-Gemini/issues)。修改源码后，在扩展页点击「重新加载」并刷新 Gemini 即可生效。
+欢迎提交 PR 或 [Issue](https://github.com/ThisIsSophieZ/ChronoNav/issues)。修改源码后，在扩展页点击「重新加载」并刷新 Gemini 即可生效。
 
 ---
 
