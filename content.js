@@ -1183,8 +1183,9 @@
       content.appendChild(label);
       btn.appendChild(nodeDot);
       btn.appendChild(content);
+      // 不设原生 title：侧栏是导航器，点击跳转后在主聊天区读全文（与 ChatGPT / Grok 一致）。
+      // 仅保留 aria-label 供屏幕阅读器读出完整内容，不退化无障碍。
       const accessibleName = fullText || t("jumpToMessage", [String(index + 1)]);
-      btn.title = accessibleName;
       btn.setAttribute("aria-label", accessibleName);
       btn.addEventListener("click", (e) => {
         e.preventDefault();
@@ -1231,7 +1232,7 @@
   function boot() {
     // 构建标记：刷新 Gemini 后控制台若能看到该行，说明已加载到最新 content script（用于排查"扩展没真正重载"）。
     try {
-      console.info("[ChronoNav] content build 2026-06-26h loaded");
+      console.info("[ChronoNav] content build 2026-06-26i loaded");
     } catch (_) {}
     bindInputSync();
     startTocObserver();
