@@ -108,18 +108,6 @@
     (document.documentElement || document.head).appendChild(s);
   }
 
-  if (document.documentElement) {
-    injectMainWorld();
-  } else {
-    document.addEventListener(
-      "readystatechange",
-      () => {
-        if (document.documentElement) injectMainWorld();
-      },
-      { once: true }
-    );
-  }
-
   /** ---------- 注入设置桥接（chrome.storage ⇄ 主世界 inject.js） ---------- */
 
   /** 把当前设置下发给主世界（inject.js 监听 SETTINGS_EVT）。 */
@@ -160,6 +148,20 @@
     },
     true
   );
+
+  // 关键顺序：必须先注册 INJECT_READY_EVT 监听，再注入主世界脚本，
+  // 否则 inject.js 抢先 dispatch ready 时本侧会错过事件（极早期请求会保持 fail-closed）。
+  if (document.documentElement) {
+    injectMainWorld();
+  } else {
+    document.addEventListener(
+      "readystatechange",
+      () => {
+        if (document.documentElement) injectMainWorld();
+      },
+      { once: true }
+    );
+  }
 
   // 设置在别处（popup / 另一标签页 / 侧栏开关）变更时，实时同步到本页与主世界。
   try {

@@ -12,21 +12,26 @@
       <section class="card">
         <div class="row">
           <div class="row-text">
-            <div class="row-title" data-i18n="popupEnableLabel">Time injection</div>
-            <div class="row-desc" data-i18n="popupEnableDesc"></div>
+            <div class="row-title" id="enabled-label" data-i18n="popupEnableLabel">Time context</div>
+            <div class="row-desc" id="enabled-desc" data-i18n="popupEnableDesc"></div>
           </div>
           <label class="switch">
-            <input type="checkbox" id="enabled" />
+            <input
+              type="checkbox"
+              id="enabled"
+              aria-labelledby="enabled-label"
+              aria-describedby="enabled-desc"
+            />
             <span class="slider" aria-hidden="true"></span>
           </label>
         </div>
 
         <div class="row row-precision">
           <div class="row-text">
-            <div class="row-title" data-i18n="popupPrecisionLabel">Precision</div>
-            <div class="row-desc" data-i18n="popupPrecisionDesc"></div>
+            <div class="row-title" id="precision-label" data-i18n="popupPrecisionLabel">Precision</div>
+            <div class="row-desc" id="precision-desc" data-i18n="popupPrecisionDesc"></div>
           </div>
-          <select id="precision">
+          <select id="precision" aria-labelledby="precision-label" aria-describedby="precision-desc">
             <option value="minute" data-i18n="popupPrecisionMinute">Minute</option>
             <option value="second" data-i18n="popupPrecisionSecond">Second</option>
           </select>

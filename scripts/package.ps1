@@ -4,9 +4,10 @@
 
 .DESCRIPTION
   Packages ONLY the files the extension needs at runtime (manifest.json,
-  content.js, inject.js, sidebar.css, icons/, _locales/) into a ZIP whose root contains
-  manifest.json, as required by the Chrome Web Store. Everything else
-  (README*, LICENSE, .git, .github, docs, scripts, PRIVACY.md, dist) is excluded.
+  content.js, inject.js, sidebar.css, popup.html, popup.js, popup.css, icons/, _locales/)
+  into a ZIP whose root contains manifest.json, as required by the Chrome Web Store.
+  Everything else (README*, LICENSE, .git, .github, docs, scripts, PRIVACY.md, dist)
+  is excluded.
 
 .PARAMETER OutputDir
   Directory to write the ZIP into. Defaults to "dist" in the repo root.
@@ -30,7 +31,7 @@ if (-not $OutputDir) {
 }
 
 # Files / folders that ship inside the extension package.
-$includeFiles = @("manifest.json", "content.js", "inject.js", "sidebar.css")
+$includeFiles = @("manifest.json", "content.js", "inject.js", "sidebar.css", "popup.html", "popup.js", "popup.css")
 $includeDirs  = @("icons", "_locales")
 
 # Verify required files exist before doing anything.
