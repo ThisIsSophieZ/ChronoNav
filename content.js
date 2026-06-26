@@ -15,6 +15,8 @@
   const IDLE_CLASS = "is-idle";
   /** 鼠标离开侧栏后延迟收起为极简点阵 */
   const IDLE_LEAVE_MS = 1500;
+  /** 首屏渲染后，若用户一直未与侧栏交互，延迟自动收起为点阵（兼顾可发现性与不打扰） */
+  const INITIAL_IDLE_MS = 2500;
   const STORAGE_KEY = "chrono-nav-toc-collapsed";
   const FAB_UP_ID = "chrono-nav-fab-up";
   const FAB_DOWN_ID = "chrono-nav-fab-down";
@@ -267,22 +269,40 @@
     return /send|submit|run|发送|提交/.test(text);
   }
 
+  /** 通知侧栏立即收起为点阵（输入框聚焦/输入时调用）。 */
+  function collapseSidebarForInput() {
+    const root = document.getElementById(ROOT_ID);
+    if (root) root.dispatchEvent(new CustomEvent("chrono-nav-idle-now"));
+  }
+
+  function isPromptEditorTarget(t) {
+    return !!(
+      t &&
+      t.getAttribute &&
+      t.getAttribute("contenteditable") === "true" &&
+      matchesSelectorList(t, EDITOR_SELECTORS)
+    );
+  }
+
   function bindInputSync() {
     const onInput = (e) => {
-      const t = e.target;
-      if (
-        t &&
-        t.getAttribute &&
-        t.getAttribute("contenteditable") === "true" &&
-        matchesSelectorList(t, EDITOR_SELECTORS)
-      ) {
-        syncPromptText(readEditorText(t));
+      if (isPromptEditorTarget(e.target)) {
+        syncPromptText(readEditorText(e.target));
+        collapseSidebarForInput();
       }
     };
     document.addEventListener("input", onInput, true);
     document.addEventListener("keyup", onInput, true);
     document.addEventListener("compositionend", onInput, true);
     document.addEventListener("paste", onInput, true);
+    // 聚焦输入框即收起侧栏，无需等到第一次按键，避免「偶尔没收起」。
+    document.addEventListener(
+      "focusin",
+      (e) => {
+        if (isPromptEditorTarget(e.target)) collapseSidebarForInput();
+      },
+      true
+    );
 
     const onSendHint = () => {
       const editor = getPrimaryEditor();
@@ -555,6 +575,29 @@
       scheduleIdleCollapse();
     });
     root.addEventListener("chrono-nav-idle-reset", expandFromIdle);
+    // 在 Gemini 输入框聚焦/输入时立即收起为点阵：除非已手动折叠，或鼠标正悬停侧栏（交给 hover 逻辑）。
+    root.addEventListener("chrono-nav-idle-now", () => {
+      clearLeaveTimer();
+      if (root.classList.contains(COLLAPSED_CLASS)) return;
+      if (root.classList.contains(IDLE_CLASS)) return;
+      try {
+        if (root.matches(":hover")) return;
+      } catch (_) {}
+      root.classList.add(IDLE_CLASS);
+    });
+
+    // 首屏：mouseenter/mouseleave 是“跨边界”事件，纯阅读（鼠标从未进出侧栏）时永远不会触发收起，
+    // 导致完整侧栏一直挡住内容。这里在加载后延时收起一次；期间任意交互（hover/聚焦/输入）都会取消。
+    leaveTimer = setTimeout(() => {
+      leaveTimer = null;
+      if (root.classList.contains(COLLAPSED_CLASS)) return;
+      if (root.classList.contains(IDLE_CLASS)) return;
+      try {
+        if (root.matches(":hover")) return;
+      } catch (_) {}
+      if (root.contains(document.activeElement)) return;
+      root.classList.add(IDLE_CLASS);
+    }, INITIAL_IDLE_MS);
   }
 
   function getSidebarInnerHtml() {
