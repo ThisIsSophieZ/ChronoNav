@@ -248,7 +248,7 @@
   }
 
   /**
-   * 从原始文本解析注入的时间戳；有则返回 HH:mm 与剥离后的正文。
+   * 从原始文本解析注入的时间戳；有则返回日期(YYYY-MM-DD)、HH:mm 与剥离后的正文。
    * 无匹配则视为历史或其它数据，不使用 new Date() 伪造时间。
    */
   function parseLeadingSystemTime(raw) {
@@ -257,20 +257,45 @@
     if (!m) {
       return {
         hadStamp: false,
+        ymd: null,
         hhmm: null,
         stripped: s.replace(/\s+/g, " ").trim(),
       };
     }
-    // 从匹配到的前缀段里尽量提取 HH:mm（首个「时:分」）。日期段无冒号，时区 +08:00 在其后，故首个即为时刻。
+    // 从匹配到的前缀段里提取日期与时刻。日期段 YYYY-MM-DD 无冒号，时区 +08:00 在时刻之后，
+    // 故首个「时:分」即为发送时刻、首个「年-月-日」即为发送日期。
+    const dateMatch = m[0].match(/(\d{4})-(\d{2})-(\d{2})/);
+    const ymd = dateMatch ? dateMatch[0] : null;
     const timeMatch = m[0].match(/(\d{1,2}):(\d{2})/);
     const hhmm = timeMatch ? `${timeMatch[1].padStart(2, "0")}:${timeMatch[2]}` : null;
     // 去掉文本中所有 [System Time: ...] 段（不限位置），其余即为正文。
     const rest = s.replace(SYSTEM_TIME_FIND_GLOBAL_RE, " ");
     return {
       hadStamp: true,
+      ymd,
       hhmm,
       stripped: rest.replace(/\s+/g, " ").trim(),
     };
+  }
+
+  /**
+   * 2 层时间显示（导航器而非社交流）：
+   *  - 今天 → HH:mm（保留钟点定位当天）
+   *  - 今年更早 → MM-DD（看日期足够）
+   *  - 跨年 → YYYY-MM-DD（兜底不歧义）
+   * 无日期（pending：刚发送）天然属于今天，直接返回 HH:mm。
+   */
+  function formatTierTime(ymd, hhmm) {
+    if (!hhmm) return null;
+    if (!ymd) return hhmm;
+    const now = new Date();
+    const pad = (n) => String(n).padStart(2, "0");
+    const todayYear = now.getFullYear();
+    const todayYmd = `${todayYear}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}`;
+    if (ymd === todayYmd) return hhmm;
+    const parts = ymd.split("-");
+    if (Number(parts[0]) === todayYear) return `${parts[1]}-${parts[2]}`;
+    return ymd;
   }
 
   function getRawMessageText(el) {
@@ -1144,7 +1169,9 @@
     rows.forEach((row, index) => {
       const { node, parsed, pendingHhmm } = row;
       const fullText = getMessageText(node);
-      const timeDisplay = parsed.hadStamp && parsed.hhmm ? parsed.hhmm : pendingHhmm || null;
+      const timeDisplay = parsed.hadStamp
+        ? formatTierTime(parsed.ymd, parsed.hhmm)
+        : pendingHhmm || null;
       const cacheKey = `${index}\u0000${fullText}`;
       const meta = ensureNodeMeta(node, index, timeDisplay, cacheKey);
       const li = document.createElement("li");
@@ -1232,7 +1259,7 @@
   function boot() {
     // 构建标记：刷新 Gemini 后控制台若能看到该行，说明已加载到最新 content script（用于排查"扩展没真正重载"）。
     try {
-      console.info("[ChronoNav] content build 2026-06-26i loaded");
+      console.info("[ChronoNav] content build 2026-06-26j loaded");
     } catch (_) {}
     bindInputSync();
     startTocObserver();
