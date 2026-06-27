@@ -1,7 +1,7 @@
 # Privacy Policy / 隐私政策
 
 **Extension / 扩展名称:** ChronoNav - Timeline for Gemini
-**Last updated / 最后更新:** 2026-06-26
+**Last updated / 最后更新:** 2026-06-27
 
 [English](#english) · [简体中文](#简体中文)
 
@@ -52,8 +52,8 @@ device, within Google's existing request flow:
 ### Data collection
 
 The extension collects **no** personally identifiable information, no browsing
-history, no message content for the developer, no credentials, and no usage
-analytics.
+history, no message content collected by the developer, no credentials, and no
+usage analytics.
 
 ### Data sharing
 
@@ -98,8 +98,8 @@ ChronoNav（“本扩展”）是面向 Gemini 网页版（`https://gemini.googl
 ### 概述
 
 开发者**不会**收集、存储、出售或接收你的个人数据。本扩展不包含任何分析、追踪或
-广告组件。除**在你开启该功能后**，时间戳会随你浏览器原本就要发往 Google 的
-Gemini 请求一同发送外，本扩展的处理均在你的浏览器本地完成。
+广告组件。本扩展的处理均在你的浏览器本地完成；唯一的例外是：**仅当你主动开启该功能后**，
+时间戳才会随你浏览器原本就要发往 Google 的 Gemini 请求一同发送。
 
 时间上下文**默认关闭**。在你通过扩展弹窗或页面内侧栏开关明确开启之前，本扩展不会向
 你的提示词追加任何内容。
@@ -124,7 +124,7 @@ Gemini 请求一同发送外，本扩展的处理均在你的浏览器本地完�
 
 ### 数据收集
 
-本扩展**不收集**任何可识别个人身份的信息、浏览历史、供开发者使用的消息内容、
+本扩展**不收集**任何可识别个人身份的信息、浏览历史、由开发者收集的消息内容、
 账号凭据或使用分析数据。
 
 ### 数据共享
