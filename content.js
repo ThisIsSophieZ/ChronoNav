@@ -233,6 +233,9 @@
   }
 
   function captureSendTime(text) {
+    // 时间上下文关闭时不注入，也不应在本地缓存发送时刻；否则关闭期间发送的消息
+    // 会留下一个从未发给 Gemini 的时间，重新开启后被 CSS 取消隐藏即“凭空出现”。
+    if (!currentSettings.enabled) return;
     const normalized = normalizePromptText(text);
     if (!normalized) return;
     const now = Date.now();

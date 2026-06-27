@@ -57,9 +57,11 @@ usage analytics.
 
 ### Data sharing
 
-The extension does **not** share any data with third parties. The only network
-interaction is your browser's own request to `gemini.google.com`, which would happen
-with or without the extension.
+The extension sends **no** data to the developer, to any analytics service, or to any
+server other than `gemini.google.com` itself. The only network interaction is your
+browser's own request to `gemini.google.com` — the request it would send with or without
+the extension. When time context is on, the timestamp travels inside that request to
+Google (as described above) and goes nowhere else.
 
 ### Permissions
 
@@ -129,8 +131,10 @@ ChronoNav（“本扩展”）是面向 Gemini 网页版（`https://gemini.googl
 
 ### 数据共享
 
-本扩展**不与任何第三方共享数据**。唯一的网络交互是你的浏览器原本就会发往
-`gemini.google.com` 的请求——无论是否安装本扩展，该请求都会发生。
+本扩展**不会把数据发送给开发者、任何分析服务，或除 `gemini.google.com` 本身以外的
+任何服务器**。唯一的网络交互是你的浏览器原本就会发往 `gemini.google.com` 的请求——
+无论是否安装本扩展，该请求都会发生。开启时间上下文后，时间戳会随这条请求发往 Google
+（如上文所述），不会发往其他任何地方。
 
 ### 权限说明
 

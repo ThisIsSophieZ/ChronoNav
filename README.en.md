@@ -57,7 +57,7 @@ ChronoNav tackles both: **it adds temporal context under the hood, and reshapes 
 
 - **No developer data collection**: no analytics, no tracking, no ads, nothing sent to the developer.
 - **Off by default & transparent**: time context is disabled until you opt in; it isn't dressed up as "fully invisible / risk-free."
-- **Minimal requests**: when enabled, only the timestamp and a numeric UTC offset travel with the request you were already sending to `gemini.google.com`; no third-party servers. Be aware this time does go to Google and may be stored by it.
+- **Minimal requests**: when enabled, only the timestamp and a numeric UTC offset travel with the request you were already sending to `gemini.google.com`; nothing is sent to any server other than Gemini itself. Be aware this time does go to Google and may be stored by it.
 - **Restrained permissions**: a content script runs only on `gemini.google.com` to read the page DOM, plus the non-sensitive `storage` permission to save local preferences (toggle / precision); no `tabs`, `cookies`, or sync `storage`.
 
 See the [privacy policy](./PRIVACY.md) for details.

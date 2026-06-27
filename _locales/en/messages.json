@@ -91,7 +91,7 @@
     "description": "Second-level precision option."
   },
   "popupPrivacyNote": {
-    "message": "Only the time and UTC offset are added — no location, account, or device info, and no third-party servers. Note: hiding it in the UI is cosmetic; the time has already been sent with the request and may be stored by Google.",
+    "message": "Only the time and UTC offset are added — no location, account, or device info, and nothing is sent to any server other than Gemini itself. Note: hiding it in the UI is cosmetic; the time has already been sent with the request and may be stored by Google.",
     "description": "Privacy note at the bottom of the popup."
   },
   "firstRunTitle": {

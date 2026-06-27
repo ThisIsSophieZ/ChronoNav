@@ -63,7 +63,7 @@ ChronoNav is an independent extension built to fix exactly that, making your AI 
 
 - Clean, Unobtrusive UI: Designed to feel native, the frosted-glass sidebar adapts to Gemini's light and dark themes. When you're not using it, it tucks away into a row of minimal dots, and reappears gracefully on hover—so it never gets in the way of your focus.
 
-- Keyboard & Accessibility: Single-step navigation shortcuts, proper ARIA landmarks, and clear button labels. The sidebar expands automatically on focus—fast and friendly for power users and developers.
+- Keyboard & Accessibility: Single-step prev/next navigation buttons, proper ARIA landmarks, and clear button labels. The sidebar expands automatically on focus—fast and friendly for power users and developers.
 
 🛡️ A Privacy Pledge from the Developer
 
@@ -99,7 +99,7 @@ ChronoNav 是专为解决这些体验而诞生的独立扩展，让你的 AI 工
   遵循现代化设计美学，毛玻璃侧栏完美适配 Gemini 的深浅色主题。闲置时，它会自动收拢为隐形的极简点阵；鼠标悬停时，才会优雅浮现。绝不打扰你的沉浸式思考。
 
 - 键盘与无障碍支持
-  支持单步跳转快捷键，配备完整的无障碍地标 (ARIA) 与可读按钮名称，聚焦时侧栏自动展开，为专业开发者提供极致的高效体验。
+  提供单步上一条/下一条跳转按钮，配备完整的无障碍地标 (ARIA) 与可读按钮名称，聚焦时侧栏自动展开，为专业开发者提供极致的高效体验。
 
 🛡️ 开发者隐私承诺
 

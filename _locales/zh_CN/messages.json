@@ -91,7 +91,7 @@
     "description": "秒级精度选项。"
   },
   "popupPrivacyNote": {
-    "message": "仅追加时间与 UTC 偏移量，不含定位、账号或设备信息；不与任何第三方服务器通信。注意：界面隐藏只是 UI 层，时间已随请求发出并可能被 Google 保存。",
+    "message": "仅追加时间与 UTC 偏移量，不含定位、账号或设备信息；除 Gemini 本身外不向任何服务器发送数据。注意：界面隐藏只是 UI 层，时间已随请求发出并可能被 Google 保存。",
     "description": "弹窗底部隐私说明。"
   },
   "firstRunTitle": {
