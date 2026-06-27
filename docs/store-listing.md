@@ -71,7 +71,7 @@ As an independent developer, I take data security seriously. ChronoNav runs enti
 
 - Zero Tracking, Zero Ads: It collects no user data and sends nothing to any analytics or third-party servers. (When Time Context is on, the timestamp travels only to Gemini itself, as part of the request you were already sending.)
 
-- Minimal Permissions: It asks only for the non-sensitive "storage" permission, used to remember your toggle and precision settings locally.
+- Minimal Permissions: It requests only the non-sensitive "storage" permission (to remember your toggle and precision settings locally) plus site access limited to Gemini (gemini.google.com)—nothing else.
 
 - You're in Control: Time Context is entirely opt-in. Only when you switch it on does the timestamp get sent to gemini.google.com along with your normal request (it's hidden in the UI, but it is still sent to Google's model as background context). The timeline itself is built entirely on your device, using only the messages already loaded on the current page.
 
@@ -107,7 +107,7 @@ ChronoNav 是专为解决这些体验而诞生的独立扩展，让你的 AI 工
 
 - 零追踪、零广告：不收集任何用户数据，不向任何分析或第三方服务器发送信息。（时间上下文功能开启时，时间戳仅作为你原有请求的一部分发送给 Gemini 本身。）
 
-- 最小权限：仅申请非敏感的 storage 权限，用于在本地保存你的开关与精度偏好。
+- 最小权限：仅申请非敏感的 storage 权限（用于在本地保存你的开关与精度偏好），以及仅限于 Gemini（gemini.google.com）的站点访问权限，别无其他。
 
 - 按需授权：时间上下文功能完全由你掌控。当且仅当你主动开启时，时间戳才会随你原有的请求发送至 gemini.google.com（时间戳在 UI 界面会被隐藏，但会作为背景信息发送给 Google 模型）。时间线导航则完全基于当前页面已加载的消息在本地生成。
 
