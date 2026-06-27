@@ -20,15 +20,14 @@
 
 - 限制：最多 132 字符，单行。
 
-English (1 选):
+English（定稿）:
 ```
-Optionally add your local time to Gemini prompts (off by default), and navigate long chats with an elegant timeline.
+Lost in long Gemini chats? Add a clean timeline to jump to any message instantly—with optional local time context for the AI.
 ```
-（约 114 字符）
 
-简体中文:
+简体中文（定稿）:
 ```
-可选为 Gemini 提示词附加本地时间（默认关闭），并用优雅的对话时间线快速导航长对话。
+在 Gemini 长对话里迷路了？用优雅的时间线一键直达任意消息，还能按需为 Gemini 补充本地时间上下文。
 ```
 
 ---
@@ -47,46 +46,72 @@ Optionally add your local time to Gemini prompts (off by default), and navigate 
 
 ## 5. Detailed description / 详细描述
 
-### English
+### English（定稿）
 
 ```
-ChronoNav gives Gemini a real sense of time, and makes long conversations easy to navigate.
+ChronoNav: Give Gemini Time Awareness & Effortless Long-Chat Navigation
 
-WHY
-Large language models don't always know what time it was when you sent each message. Say "good morning," then "good evening" a minute later, and the model can't tell what happened in between. ChronoNav fixes this by attaching your local system time to every prompt you send (off by default — you opt in), and by adding a clickable timeline of your messages on the right side of the page.
+Deep work with AI comes with two everyday frustrations. First, the AI has no real sense of time—it doesn't know how much time passed between your messages. Second, once a chat runs into dozens of turns, finding that one earlier reply means scrolling forever.
 
-FEATURES
-- Time context (off by default, toggleable): when enabled, adds a local timestamp with a numeric UTC offset only (e.g. [System Time: 2026-06-18 21:34 +08:00] for minute precision, or with seconds for second precision) into the request you were already sending to Gemini. No IANA time zone, location, account, or device info. Toggle it from the popup or the in-page sidebar switch. Your chat bubbles stay clean; note that hiding the prefix in the UI is cosmetic — the time is still sent to Google with the request.
-- Interactive timeline outline: a subway-map style list of your messages with colored nodes. Click any node to smooth-scroll to that message. The current message is highlighted automatically as you scroll.
-- Step navigation: up/down arrows jump between adjacent messages, so you don't have to scroll endlessly.
-- Restrained, theme-aware UI: glassmorphism sidebar that follows Gemini's light/dark theme, collapses into a minimal dot column when idle, and surfaces the send time on hover.
-- Keyboard and accessibility: navigation landmark and readable button names; the sidebar expands when focused.
+ChronoNav is an independent extension built to fix exactly that, making your AI workflow faster, sharper, and fully in your control.
 
-PRIVACY
-No developer data collection, no tracking, no ads, and no third-party servers. Time context is off by default; when enabled, only the timestamp and a numeric UTC offset travel with the request your browser already sends to gemini.google.com (and may be stored by Google). The timeline is generated locally from messages already visible on the page. The extension runs only on gemini.google.com; it uses the non-sensitive storage permission solely to save your local preferences (toggle/precision). See the privacy policy for details.
+✨ Core Features
 
-ChronoNav is an independent extension and is not affiliated with, endorsed by, or sponsored by Google or Gemini.
+- Precise Time Context (off by default): When you turn it on, ChronoNav quietly adds a small local timestamp to the prompts you send to Gemini. This gives the AI a real sense of time, so its answers fit the moment you're actually in. (Note: it only adds the time and a numeric UTC offset—never your location or any personal data.)
+
+- Subway-Map Timeline: Say goodbye to endless scrolling. ChronoNav builds a live, subway-map-style timeline with colored nodes down the right side of the page. Click any node to glide straight to that message, and the timeline highlights where you are as you read.
+
+- Clean, Unobtrusive UI: Designed to feel native, the frosted-glass sidebar adapts to Gemini's light and dark themes. When you're not using it, it tucks away into a row of minimal dots, and reappears gracefully on hover—so it never gets in the way of your focus.
+
+- Keyboard & Accessibility: Single-step navigation shortcuts, proper ARIA landmarks, and clear button labels. The sidebar expands automatically on focus—fast and friendly for power users and developers.
+
+🛡️ A Privacy Pledge from the Developer
+
+As an independent developer, I take data security seriously. ChronoNav runs entirely in your browser:
+
+- Zero Tracking, Zero Ads: It collects no user data and sends nothing to any analytics or third-party servers. (When Time Context is on, the timestamp travels only to Gemini itself, as part of the request you were already sending.)
+
+- Minimal Permissions: It asks only for the non-sensitive "storage" permission, used to remember your toggle and precision settings locally.
+
+- You're in Control: Time Context is entirely opt-in. Only when you switch it on does the timestamp get sent to gemini.google.com along with your normal request (it's hidden in the UI, but it is still sent to Google's model as background context). The timeline itself is built entirely on your device, using only the messages already loaded on the current page.
+
+Disclaimer: ChronoNav is a third-party extension built by an independent developer. It is not affiliated with, sponsored by, or endorsed by Google or Gemini.
 ```
 
-### 简体中文
+### 简体中文（定稿）
 
 ```
-ChronoNav 让 Gemini 拥有真实的时间感，也让长对话重新变得好导航。
+ChronoNav：为 Gemini 赋予时间感知，让长对话导航如丝般顺滑
 
-为什么需要它
-大模型并不总是知道你发送每条消息时的真实时间。你早上说“早上好”，一分钟后又说“晚上好”，模型无法判断这之间发生了什么。ChronoNav 会在你发送的每条消息上附加本地系统时间（默认关闭，需你主动开启），并在页面右侧生成一条可点击的消息时间线。
+在使用大模型进行深度工作时，我们常遇到两个痛点：一是 AI 并没有真实的“时间概念”（它不知道你两句话之间隔了多长时间）；二是当对话积累到几十轮后，想要回头寻找某段上下文，只能在无尽的网页里痛苦地上下滑动。
 
-功能
-- 时间上下文（默认关闭，可开关）：开启后，在你本就要发往 Gemini 的请求中，附加仅带数字 UTC 偏移量的本地时间戳（如分钟精度 [System Time: 2026-06-18 21:34 +08:00]，或秒精度带秒）。不含 IANA 时区、定位、账号或设备信息。可在弹窗或页面内侧栏开关切换。聊天气泡保持纯净；注意界面隐藏只是表层处理，时间仍会随请求发给 Google。
-- 交互式时间线大纲：地铁图风格的消息列表，带彩色节点。点击任意节点即可平滑滚动到对应消息，滚动页面时自动高亮当前消息。
-- 单步导航：上下箭头在相邻消息间跳转，免去无尽滚动。
-- 克制且跟随主题的界面：毛玻璃侧栏跟随 Gemini 深浅色主题，闲置时收拢为极简点阵，悬停时浮现发送时间。
-- 键盘与无障碍：导航地标与可读按钮名称，聚焦时侧栏自动展开。
+ChronoNav 是专为解决这些体验而诞生的独立扩展，让你的 AI 工作流更加高效、精准且可控。
 
-隐私
-开发者不收集数据，不追踪，不投放广告，也不与任何第三方服务器通信。时间上下文默认关闭；开启后，仅时间戳与数字 UTC 偏移量会随你浏览器原本就要发往 gemini.google.com 的请求一同发送（并可能被 Google 保存）。时间线仅基于页面上已显示的消息在本地生成。扩展仅在 gemini.google.com 运行；仅使用非敏感的 storage 权限保存你的本地偏好（开关/精度）。详见隐私政策。
+✨ 核心功能
 
-ChronoNav 是独立扩展，与 Google 或 Gemini 没有关联，未获得其认可、背书或赞助。
+- 精准的时间上下文 (Time Context)
+  按需开启（默认关闭）。开启后，系统会在你发送给 Gemini 的提示词中，自动且隐秘地附加极简的本地时间戳。这让 AI 真正拥有了“时间感知”，能够理解你所处的时间线，从而给出更符合当下语境的回答。（注：仅附加数字与 UTC 偏移量，绝不涉及设备定位或隐私信息。）
+
+- 地铁图式交互时间线 (Visual Timeline)
+  告别无休止的鼠标滚轮。ChronoNav 会在页面右侧实时生成一条带有彩色节点的“地铁图”时间线。点击任意节点，即可平滑滚动至对应对话；阅读时，节点会自动高亮你当前所在的位置。
+
+- 极简且克制的 UI 体验
+  遵循现代化设计美学，毛玻璃侧栏完美适配 Gemini 的深浅色主题。闲置时，它会自动收拢为隐形的极简点阵；鼠标悬停时，才会优雅浮现。绝不打扰你的沉浸式思考。
+
+- 键盘与无障碍支持
+  支持单步跳转快捷键，配备完整的无障碍地标 (ARIA) 与可读按钮名称，聚焦时侧栏自动展开，为专业开发者提供极致的高效体验。
+
+🛡️ 开发者隐私承诺
+
+作为独立开发者，我深知数据安全的重要性。ChronoNav 采用纯前端本地架构：
+
+- 零追踪、零广告：不收集任何用户数据，不向任何分析或第三方服务器发送信息。（时间上下文功能开启时，时间戳仅作为你原有请求的一部分发送给 Gemini 本身。）
+
+- 最小权限：仅申请非敏感的 storage 权限，用于在本地保存你的开关与精度偏好。
+
+- 按需授权：时间上下文功能完全由你掌控。当且仅当你主动开启时，时间戳才会随你原有的请求发送至 gemini.google.com（时间戳在 UI 界面会被隐藏，但会作为背景信息发送给 Google 模型）。时间线导航则完全基于当前页面已加载的消息在本地生成。
+
+免责声明：ChronoNav 是一款由独立开发者构建的第三方扩展工具，与 Google 或 Gemini 没有任何官方关联、赞助或背书。
 ```
 
 ---

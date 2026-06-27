@@ -2,11 +2,11 @@
 
 [简体中文](./README.md) · **English**
 
-> Give Gemini real time-awareness, and turn long conversations into a one-click timeline.
+> Give Gemini real time awareness, and navigate long conversations through a one-click timeline.
 
 ChronoNav is a lightweight Chrome extension for the [Gemini web app](https://gemini.google.com/) that does two things:
 
-1. **Time context (optional, off by default)** — when enabled, it adds your local time and UTC offset in front of the prompt inside the request your browser already sends to Gemini, so the model can reason about "how long ago" and "what time is it now."
+1. **Time context (optional, off by default)** — when enabled, it adds your local time and UTC offset in front of the prompt inside the request your browser already sends to Gemini, so the model can reason about "how long ago" something happened and "what time it is now."
 2. **Conversation timeline (Timeline TOC)** — a "subway-map" of colored nodes on the right edge of the page; click any node to smooth-scroll to that message.
 
 ChronoNav is an independent extension and is not affiliated with, endorsed by, or sponsored by Google or Gemini.
@@ -15,9 +15,9 @@ ChronoNav is an independent extension and is not affiliated with, endorsed by, o
 
 ## 💡 Why build it
 
-LLMs are smart but usually lack a real sense of time. In long-running tasks this creates subtle disconnects: the model can't reliably order "the error half an hour ago," "last night's plan," and "the current state." And once a chat runs dozens of turns deep, scrolling to relocate context simply doesn't scale.
+LLMs are smart but usually lack a real sense of time. In long-running tasks this creates subtle disconnects: the model can't reliably order "the error half an hour ago," "last night's plan," and "the current state." And once a chat runs dozens of turns deep, scrolling back to find earlier context simply doesn't scale.
 
-ChronoNav tackles both: **it fills in temporal context under the hood, and reshapes long-conversation navigation on the surface.**
+ChronoNav tackles both: **it adds temporal context under the hood, and reshapes how you navigate long conversations at the UI layer.**
 
 ---
 
@@ -41,7 +41,7 @@ ChronoNav tackles both: **it fills in temporal context under the hood, and resha
 
 - Minimalist up/down arrows at both ends let you jump one message at a time — no scroll-wheel fatigue.
 
-### 🎨 Restrained, Breathing UI
+### 🎨 Restrained, Unobtrusive UI
 
 - Follows Gemini's native light/dark themes.
 - Idle state: when the cursor leaves, the sidebar collapses into a minimal column of colored dots pinned to the right edge; hover to expand smoothly.
