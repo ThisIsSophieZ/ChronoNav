@@ -95,19 +95,19 @@
     "description": "Privacy note at the bottom of the popup."
   },
   "firstRunTitle": {
-    "message": "ChronoNav: time context is off by default",
+    "message": "Let Gemini Know the Time",
     "description": "First-run notice title."
   },
   "firstRunBody": {
-    "message": "When enabled, ChronoNav adds your local date, time, and UTC offset to prompts you send to Gemini, so Gemini can better understand timing. This information is sent to Google as part of your Gemini request and may be stored by Google. You can turn it off anytime from the extension popup or sidebar switch.",
+    "message": "Time Context is off by default. When enabled, ChronoNav adds your current local time to messages you send to Gemini, helping it better understand when things happen. You can turn it off anytime with the clock icon.",
     "description": "First-run notice body."
   },
   "firstRunEnable": {
-    "message": "Turn on time context",
+    "message": "Turn On",
     "description": "First-run notice enable button."
   },
   "firstRunDismiss": {
-    "message": "Not now",
+    "message": "Keep Off",
     "description": "First-run notice dismiss button."
   }
 }
