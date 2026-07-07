@@ -1,109 +1,109 @@
 # ⏱️ ChronoNav — Timeline for Gemini
 
-**简体中文** · [English](./README.en.md)
+[简体中文](./README.zh-CN.md) · **English**
 
-> 为 Gemini 补全真实的时间上下文，并把冗长对话梳理成可一键跳转的时间线。
+> Give Gemini real time awareness, and navigate long conversations through a one-click timeline.
 
-ChronoNav 是一款专为 [Gemini 网页版](https://gemini.google.com/) 设计的轻量级 Chrome 扩展，做两件事：
+ChronoNav is a lightweight Chrome extension for the [Gemini web app](https://gemini.google.com/) that does two things:
 
-1. **时间上下文（可选，默认关闭）** —— 开启后，在你发往 Gemini 的请求中、于提示词前插入本地时间与 UTC 偏移量，让模型能理解“多久之前”“现在几点”这类时序信息。
-2. **对话时间线（Timeline TOC）** —— 在页面右侧生成一条彩色节点的“地铁图”，点击即可平滑跳转到任意一条历史消息。
+1. **Time context (optional, off by default)** — when enabled, it adds your local time and UTC offset before your prompt is sent to Gemini, so the model can reason about "how long ago" something happened and "what time it is now."
+2. **Conversation timeline (Timeline TOC)** — a "subway-map" of colored nodes on the right edge of the page; click any node to smooth-scroll to that message.
 
-ChronoNav 是独立扩展，与 Google 或 Gemini 没有关联，未获得其认可、背书或赞助。
-
----
-
-## 💡 为什么做它
-
-大模型很聪明，但通常没有真实的“时间感”。在长线任务里这会造成微妙的脱节：它分不清“半小时前的报错”“昨晚的计划”和“现在的状态”之间的先后。而几十轮的深水区对话，靠滚动找上下文早已力不从心。
-
-ChronoNav 同时解决这两点：**底层补全时间上下文，表层重塑长对话导航。**
+ChronoNav is an independent extension and is not affiliated with, endorsed by, or sponsored by Google or Gemini.
 
 ---
 
-## ✨ 核心特性
+## 💡 Why build it
 
-### ⏳ 时间上下文（Time Context）
+LLMs are smart but usually lack a real sense of time. In long-running tasks this creates subtle disconnects: the model can't reliably order "the error half an hour ago," "last night's plan," and "the current state." And once a chat runs dozens of turns deep, scrolling back to find earlier context simply doesn't scale.
 
-- **默认关闭、需手动开启**：知情同意优先，绝不偷偷修改你的 prompt。
-- **一处开关，两个入口**：扩展弹窗、或右侧侧栏顶部的时钟图标（点亮=开，灰色=关）。
-- **精度可选**：分钟级（默认，`[System Time: 2026-06-18 21:34 +08:00]`，隐私更温和）或秒级（`…21:34:12…`，更利于日志排查）。
-- **信息最小化**：只附加时间戳 + 数字 UTC 偏移量，**不含 IANA 城市名、定位、账号或设备信息**。
-- **关闭即清场**：关闭后不再注入，且侧栏的所有时间（含历史已解析的）一并隐藏，只保留节点与文本；开回来时间立即恢复。
-- **透明，不装隐形**：UI 中隐藏前缀只是表层处理——时间已随请求发出，并可能被 Google 保存。首次运行会有明确提示。
-
-### 🗺️ 动态全局大纲（Interactive Timeline TOC）
-
-- 右侧自动生成带彩色节点的时间线，点击任意节点平滑滚动到对应消息。
-- 活动项追踪：主页面滚动时，侧栏自动高亮并居中当前视口内的对话节点。
-
-### 🖱️ 单步极速导航
-
-- 侧栏上下两端的极简箭头，可在相邻消息间逐条跳转，免去滚轮疲劳。
-
-### 🎨 克制与呼吸感 UI
-
-- 跟随 Gemini 深浅色原生主题。
-- 闲置态：鼠标离开后收拢为最右侧的极简彩色点阵，不挡视野；悬停丝滑展开。
-
-### ⌨️ 无障碍语义
-
-- 侧栏标注为导航地标（`role="navigation"`），条目与箭头均带可读名称（`aria-label`）。
-- 键盘可达：焦点进入侧栏即展开闲置态。
+ChronoNav tackles both: **it adds temporal context under the hood, and reshapes how you navigate long conversations at the UI layer.**
 
 ---
 
-## 🛡️ 数据安全（Zero Tracking）
+## ✨ Core Features
 
-- **开发者不收集数据**：无分析、无追踪、无广告，不向开发者发送任何数据。
-- **默认关闭 + 透明可控**：时间上下文默认关闭，需你主动开启；不会把功能包装成“完全隐形 / 无风险”。
-- **请求极简**：开启后，仅时间戳与数字 UTC 偏移量随你原本就要发往 `gemini.google.com` 的请求一同发送，除 Gemini 本身外不向任何服务器发送数据。但请知悉：该时间会发给 Google 并可能被其保存。
-- **权限克制**：仅在 `gemini.google.com` 注入内容脚本读取页面 DOM；仅申请非敏感的 `storage` 权限保存本地偏好（开关 / 精度）；不申请 `tabs`、`cookies` 或同步 `storage` 等敏感权限。
+### ⏳ Time Context
 
-完整说明见 [隐私政策](./PRIVACY.md)。
+- **Off by default, opt-in**: informed consent first — it never silently modifies your prompts.
+- **One switch, two entry points**: the extension popup, or the clock icon at the top of the sidebar (lit = on, gray = off).
+- **Choose precision**: minute (default, `[System Time: 2026-06-18 21:34 +08:00]`, gentler on privacy) or second (`…21:34:12…`, better for log triage).
+- **Minimal data**: only a timestamp + numeric UTC offset — **no IANA city name, location, account, or device info**.
+- **Off means clean**: turning it off stops injection and hides every time in the sidebar (including historical parsed ones), leaving only nodes and text; toggle back on and times reappear.
+- **Transparent, not "invisible"**: the extension keeps the time prefix hidden in the page UI to reduce visual clutter. The timestamp remains part of the prompt context sent to Gemini, and a first-run notice makes this explicit.
+
+### 🗺️ Interactive Timeline TOC
+
+- A timeline of colored nodes is generated automatically on the right; click any node to smooth-scroll to that message.
+- Active item tracking: as you scroll the main page, the sidebar highlights and centers the message currently in view.
+
+### 🖱️ Step-by-Step Navigation
+
+- Minimalist up/down arrows at both ends let you jump one message at a time — no scroll-wheel fatigue.
+
+### 🎨 Restrained, Unobtrusive UI
+
+- Follows Gemini's native light/dark themes.
+- Idle state: when the cursor leaves, the sidebar collapses into a minimal column of colored dots pinned to the right edge; hover to expand smoothly.
+
+### ⌨️ Accessibility
+
+- The sidebar is a navigation landmark (`role="navigation"`); items and arrows carry readable names (`aria-label`).
+- Keyboard friendly: the idle state expands when focus enters the sidebar.
 
 ---
 
-## 🚀 安装与使用
+## 🛡️ Data Safety (Zero Tracking)
 
-### 开发者模式加载
+- **No developer data collection**: no analytics, no tracking, no ads, nothing sent to the developer.
+- **Off by default & transparent**: time context is disabled until you opt in; it isn't dressed up as "fully invisible / risk-free."
+- **Minimal requests**: when enabled, only the timestamp and a numeric UTC offset are added locally before your prompt is sent to `gemini.google.com`; nothing is sent to any server other than Gemini itself. Be aware this time does go to Google and may be stored by it.
+- **Restrained permissions**: a content script runs only on `gemini.google.com` to read the page DOM, plus the non-sensitive `storage` permission to save local preferences (toggle / precision); no `tabs`, `cookies`, or sync `storage`.
 
-1. 克隆或下载本仓库源码。
-2. 在 Chrome 打开 `chrome://extensions/`。
-3. 开启右上角「开发者模式」。
-4. 点击「加载已解压的扩展程序」，选择包含 `manifest.json` 的项目根目录。
-5. 刷新 [Gemini 网页端](https://gemini.google.com/)，右侧即出现时间线大纲。
+See the [privacy policy](./PRIVACY.md) for details.
 
-> 时间上下文**默认关闭**。需要时点扩展弹窗或侧栏顶部的时钟开启。
+---
 
-### 打包为商店 ZIP
+## 🚀 Install & Use
+
+### Load in Developer Mode
+
+1. Clone or download this repository.
+2. Open `chrome://extensions/` in Chrome.
+3. Enable **Developer mode** (top-right).
+4. Click **Load unpacked** and select the project root containing `manifest.json`.
+5. Refresh the [Gemini web app](https://gemini.google.com/) — the timeline outline appears on the right.
+
+> Time context is **off by default**. Turn it on from the popup or the clock at the top of the sidebar when you need it.
+
+### Build a store ZIP
 
 ```powershell
 powershell -ExecutionPolicy Bypass -File .\scripts\package.ps1
 ```
 
-脚本只会打包运行时所需文件（`manifest.json`、`content.js`、`inject.js`、`sidebar.css`、`popup.*`、`icons/`、`_locales/`），产物在 `dist/`，`manifest.json` 位于 ZIP 根目录，符合 Chrome 网上应用店要求。
+The script packages only runtime files (`manifest.json`, `content.js`, `inject.js`, `sidebar.css`, `popup.*`, `icons/`, `_locales/`) into `dist/`, with `manifest.json` at the ZIP root as required by the Chrome Web Store.
 
 ---
 
-## 📁 架构与开发
+## 📁 Architecture & Development
 
-本项目保持极简架构，无构建依赖（Zero Build Step）：
+A minimal architecture with zero build step:
 
-| 文件 | 职责 |
+| File | Responsibility |
 | --- | --- |
-| `manifest.json` | MV3 基础配置（含 `action` 弹窗、`storage` 权限）。 |
-| `content.js` | DOM 解析、大纲生成、滚动监听、UI 状态机，以及设置桥接（`chrome.storage` ⇄ 主世界）。 |
-| `inject.js` | XHR/Fetch 拦截，时间上下文注入（受开关 / 精度控制，默认 fail-closed 关闭）。 |
-| `popup.html` / `popup.js` / `popup.css` | 设置页：时间上下文开关、精度、用途说明。 |
-| `sidebar.css` | 毛玻璃特效、动画、闲置态布局，时钟状态控件与首次提示样式。 |
-| `icons/` | 扩展图标（16 / 32 / 48 / 128）。 |
-| `_locales/` | 界面与商店文案多语言（en / zh_CN，基于 `chrome.i18n`）。 |
+| `manifest.json` | MV3 base config (incl. `action` popup, `storage` permission). |
+| `content.js` | DOM parsing, outline generation, scroll tracking, UI state machine, and the settings bridge (`chrome.storage` ⇄ main world). |
+| `inject.js` | XHR/Fetch interception for time-context injection (gated by toggle/precision, fail-closed off by default). |
+| `popup.html` / `popup.js` / `popup.css` | Settings page: time-context toggle, precision, purpose explanation. |
+| `sidebar.css` | Glassmorphism, animations, idle-state layout, clock status control, and first-run notice styles. |
+| `icons/` | Extension icons (16 / 32 / 48 / 128). |
+| `_locales/` | Localized UI and store strings (en / zh_CN, via `chrome.i18n`). |
 
-欢迎提交 PR 或 [Issue](https://github.com/ThisIsSophieZ/ChronoNav/issues)。修改源码后，在扩展页点击「重新加载」并刷新 Gemini 即可生效。
+PRs and [issues](https://github.com/ThisIsSophieZ/ChronoNav/issues) are welcome. After editing the source, hit "Reload" on the extensions page and refresh Gemini.
 
 ---
 
-## 📄 许可
+## 📄 License
 
 [MIT](./LICENSE) © ThisIsSophieZ

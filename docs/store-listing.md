@@ -69,7 +69,7 @@ ChronoNav is an independent extension built to fix exactly that, making your AI 
 
 As an independent developer, I take data security seriously. ChronoNav runs entirely in your browser:
 
-- Zero Tracking, Zero Ads: It collects no user data and sends nothing to any analytics or third-party servers. (When Time Context is on, the timestamp travels only to Gemini itself, as part of the request you were already sending.)
+- Zero Tracking, Zero Ads: It collects no user data and sends nothing to any analytics or third-party servers. (When Time Context is on, the timestamp is added locally before your prompt is sent to Gemini.)
 
 - Minimal Permissions: It requests only the non-sensitive "storage" permission (to remember your toggle and precision settings locally) plus site access limited to Gemini (gemini.google.com)—nothing else.
 
