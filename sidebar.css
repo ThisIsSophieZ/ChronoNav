@@ -3,11 +3,22 @@
 #mate-sidebar {
   position: fixed;
   top: 50%;
-  right: 16px;
+  --viewport-edge: 16px;
+  right: var(--viewport-edge);
   transform: translateY(-50%);
   width: 280px;
   max-height: 80vh;
   z-index: 9999;
+
+  /* —— 单一数据源：竖轴 / 圆点 / 行高统一派生，跨分辨率不再各自错位 —— */
+  --rail-center: 32.5px; /* 竖轴中心 x：竖线与圆点都从它派生 */
+  --gutter: 18px;        /* 容器(12)+列表(6) 左侧累计偏移，圆点据此回推 */
+  --dot: 10px;           /* 圆点直径 */
+  --row-line: 18px;      /* 标题行高（偶数，消半像素）*/
+  --row-pad-y: 8px;      /* 按钮上下对称内边距 */
+  /* 次级控件（上下箭头、时间关闭时钟）：同一灰度，比正文弱、比装饰线强 */
+  --chrome-muted: rgba(95, 99, 104, 0.85);
+  --chrome-muted-idle: 0.55; /* 闲置态箭头再淡一档，时钟吊坠保持全不透明 */
   font-family: "Google Sans", "Segoe UI", system-ui, sans-serif;
   font-size: 12px;
   line-height: 1.35;
@@ -29,7 +40,8 @@
 @media (max-width: 1280px) {
   #mate-sidebar {
     width: 252px;
-    right: 10px;
+    --viewport-edge: 10px;
+    --row-line: 16px; /* 小屏行高收紧，整体更精致 */
   }
 }
 
@@ -78,7 +90,7 @@
   border-radius: 0;
   cursor: pointer;
   background: transparent;
-  color: rgba(95, 99, 104, 0.45);
+  color: var(--chrome-muted);
   line-height: 0;
   transition: color 0.18s ease, opacity 0.2s ease;
 }
@@ -112,7 +124,7 @@
   border: 1px solid rgba(255, 255, 255, 0.18);
   background: rgba(255, 255, 255, 0.16);
   box-shadow:
-    0 16px 36px rgba(0, 0, 0, 0.16),
+    0 10px 24px rgba(0, 0, 0, 0.14),
     inset 0 1px 0 rgba(255, 255, 255, 0.18);
   backdrop-filter: blur(24px) saturate(1.45);
   -webkit-backdrop-filter: blur(24px) saturate(1.45);
@@ -135,7 +147,7 @@
 .mate-list-container::before {
   content: "";
   position: absolute;
-  left: 32px;
+  left: calc(var(--rail-center) - 0.5px);
   top: 24px;
   bottom: 18px;
   width: 1px;
@@ -147,7 +159,7 @@
 .mate-sidebar-toggle {
   position: absolute;
   top: 50%;
-  right: -28px;
+  right: calc(-1 * var(--viewport-edge));
   transform: translateY(-50%);
   width: auto;
   min-width: 24px;
@@ -206,7 +218,7 @@
 }
 
 .chrono-nav-inject-status.is-off {
-  color: rgba(95, 99, 104, 0.85);
+  color: var(--chrome-muted);
 }
 
 .chrono-nav-inject-status.is-on {
@@ -241,16 +253,8 @@
   opacity: 1;
 }
 
-#mate-sidebar.is-light .chrono-nav-inject-status.is-off {
-  color: rgba(80, 84, 90, 0.88);
-}
-
 #mate-sidebar.is-light .chrono-nav-inject-status:hover {
   background: rgba(0, 0, 0, 0.06);
-}
-
-#mate-sidebar.is-dark .chrono-nav-inject-status.is-off {
-  color: rgba(235, 235, 235, 0.72);
 }
 
 #mate-sidebar.is-dark .chrono-nav-inject-status:hover {
@@ -430,7 +434,7 @@
   width: 100%;
   display: block;
   margin: 0;
-  padding: 7px 12px 9px 42px;
+  padding: var(--row-pad-y) 12px var(--row-pad-y) 42px;
   border: none;
   border-radius: 10px;
   text-align: left;
@@ -456,10 +460,10 @@
   max-height: 0;
   opacity: 0;
   overflow: hidden;
-  font-size: 12px;
+  font-size: 11px;
   line-height: 1;
   letter-spacing: 0.02em;
-  color: rgba(90, 90, 90, 0.62);
+  color: rgba(90, 90, 90, 0.48);
   white-space: nowrap;
   transition:
     opacity 0.16s ease,
@@ -470,7 +474,7 @@
 /* 默认不显示时间，仅在悬停 / 键盘聚焦该条目时浮现，避免长列表冗余。 */
 .chrono-nav-toc-item.toc-item:hover .chrono-nav-toc-time,
 .chrono-nav-toc-item.toc-item:focus-within .chrono-nav-toc-time {
-  max-height: 16px;
+  max-height: 14px;
   margin-bottom: 3px;
   opacity: 1;
 }
@@ -492,7 +496,7 @@
 .chrono-nav-toc-label {
   display: block;
   font-size: 13px;
-  line-height: 1.35;
+  line-height: var(--row-line);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -500,16 +504,18 @@
 
 .chrono-nav-toc-node {
   position: absolute;
-  left: 9px;
-  top: 50%;
-  width: 10px;
-  height: 10px;
+  /* 水平：与竖线同源；垂直：底部锚定到标题行（不随时间行展开漂移）*/
+  left: calc(var(--rail-center) - var(--gutter) - var(--dot) / 2);
+  top: auto;
+  bottom: calc(var(--row-pad-y) + var(--row-line) / 2);
+  width: var(--dot);
+  height: var(--dot);
   border-radius: 50%;
   background: var(--chrono-node-color);
   box-shadow:
-    0 0 0 3px rgba(255, 255, 255, 0.38),
-    0 4px 12px rgba(0, 0, 0, 0.15);
-  transform: translateY(-50%) scale(1);
+    0 0 0 3px rgba(255, 255, 255, 0.4),
+    0 1px 5px rgba(0, 0, 0, 0.18);
+  transform: translateY(50%) scale(1);
   transform-origin: center;
   animation: chrono-nav-node-pulse 1.8s ease-in-out infinite;
   transition:
@@ -526,18 +532,18 @@
 
 .chrono-nav-toc-btn:hover .chrono-nav-toc-node {
   animation: none;
-  transform: translateY(-50%) scale(1.6);
+  transform: translateY(50%) scale(1.6);
   box-shadow:
-    0 0 0 4px rgba(255, 255, 255, 0.48),
-    0 8px 16px rgba(0, 0, 0, 0.18);
+    0 0 0 4px rgba(255, 255, 255, 0.5),
+    0 2px 8px rgba(0, 0, 0, 0.2);
 }
 
 .chrono-nav-toc-item.toc-item.is-active .chrono-nav-toc-node {
   animation: none;
-  transform: translateY(-50%) scale(1.4);
+  transform: translateY(50%) scale(1.4);
   box-shadow:
     0 0 0 4px rgba(255, 255, 255, 0.55),
-    0 6px 18px rgba(0, 0, 0, 0.22);
+    0 2px 9px rgba(0, 0, 0, 0.22);
   filter: brightness(1.12);
 }
 
@@ -545,14 +551,9 @@
   font-weight: 600;
 }
 
-.chrono-nav-toc-item.toc-item.is-active .chrono-nav-toc-time {
-  font-weight: 600;
-  opacity: 0.88;
-}
-
 .chrono-nav-toc-item.toc-item.is-active .chrono-nav-toc-btn:hover .chrono-nav-toc-node {
   animation: none;
-  transform: translateY(-50%) scale(1.48);
+  transform: translateY(50%) scale(1.48);
 }
 
 .chrono-nav-toc-btn:active {
@@ -569,6 +570,8 @@
 /* —— 闲置：中间区透明化，上下箭头变淡 —— */
 #mate-sidebar.is-idle:not(.is-collapsed) {
   width: 40px !important;
+  --rail-center: 19.5px; /* 闲置态竖轴左移，圆点/竖线仍同源 */
+  --gutter: 10px;        /* 闲置态容器(4)+列表(6) 左偏移 */
 }
 
 #mate-sidebar.is-idle:not(.is-collapsed) .mate-list-container {
@@ -587,12 +590,21 @@
 
 #mate-sidebar.is-idle:not(.is-collapsed) .mate-nav-up,
 #mate-sidebar.is-idle:not(.is-collapsed) .mate-nav-down {
-  opacity: 0.35;
+  opacity: var(--chrome-muted-idle);
 }
 
 #mate-sidebar.is-idle:not(.is-collapsed) .chrono-nav-toc-content {
   opacity: 0;
   pointer-events: none;
+}
+
+/* 闲置（珍珠点阵）态：强制折叠时间行——否则之前被点击/聚焦过的那条会因
+   :focus-within 仍撑开时间行的高度，导致该行变高、圆点间距被拉长。
+   此态内容本就不可见，折叠无任何视觉损失，只为让每行回到单行高、珍珠间距一致。 */
+#mate-sidebar.is-idle:not(.is-collapsed) .chrono-nav-toc-time {
+  max-height: 0;
+  margin-bottom: 0;
+  opacity: 0;
 }
 
 #mate-sidebar.is-idle:not(.is-collapsed) .chrono-nav-toc-empty {
@@ -601,13 +613,11 @@
 }
 
 #mate-sidebar.is-idle:not(.is-collapsed) .mate-list-container::before {
-  left: 19px;
   top: 20px;
   bottom: 14px;
 }
 
 #mate-sidebar.is-idle:not(.is-collapsed) .chrono-nav-toc-node {
-  left: 5px;
   animation: chrono-nav-node-pulse 1.8s ease-in-out infinite;
 }
 
@@ -624,39 +634,39 @@
 
 #mate-sidebar.is-idle:not(.is-collapsed) .chrono-nav-toc-btn:hover .chrono-nav-toc-node {
   animation: chrono-nav-node-pulse 1.8s ease-in-out infinite;
-  transform: translateY(-50%) scale(1.3);
+  transform: translateY(50%) scale(1.3);
   box-shadow:
-    0 0 0 3px rgba(255, 255, 255, 0.38),
-    0 4px 12px rgba(0, 0, 0, 0.15);
+    0 0 0 3px rgba(255, 255, 255, 0.4),
+    0 1px 5px rgba(0, 0, 0, 0.15);
 }
 
 @keyframes chrono-nav-node-pulse {
   0%,
   100% {
-    transform: translateY(-50%) scale(1);
+    transform: translateY(50%) scale(1);
   }
 
   50% {
-    transform: translateY(-50%) scale(1.3);
+    transform: translateY(50%) scale(1.3);
   }
 }
 
 /* —— 主题跟随：以 Gemini 页面实际明暗为准（由 content.js 打 is-light / is-dark）。
    节点圆点配色（--chrono-node-color / Google 四色）不在此处覆盖，保持原样。 —— */
+#mate-sidebar.is-light {
+  --chrome-muted: rgba(80, 84, 90, 0.88);
+}
+
 #mate-sidebar.is-light .mate-list-container {
   border-color: rgba(255, 255, 255, 0.44);
   background: rgba(255, 255, 255, 0.28);
   box-shadow:
-    0 16px 32px rgba(0, 0, 0, 0.12),
+    0 10px 22px rgba(0, 0, 0, 0.1),
     inset 0 1px 0 rgba(255, 255, 255, 0.4);
 }
 
 #mate-sidebar.is-light .mate-sidebar-toggle {
   color: rgba(90, 90, 90, 0.92);
-}
-
-#mate-sidebar.is-light .mate-nav-step {
-  color: rgba(95, 99, 104, 0.5);
 }
 
 #mate-sidebar.is-light .mate-nav-step:hover:not(:disabled) {
@@ -668,7 +678,7 @@
 }
 
 #mate-sidebar.is-light .chrono-nav-toc-time {
-  color: rgba(90, 90, 90, 0.62);
+  color: rgba(90, 90, 90, 0.5);
 }
 
 #mate-sidebar.is-light .chrono-nav-toc-btn {
@@ -683,20 +693,20 @@
   color: rgba(120, 120, 120, 0.68);
 }
 
+#mate-sidebar.is-dark {
+  --chrome-muted: rgba(235, 235, 235, 0.72);
+}
+
 #mate-sidebar.is-dark .mate-list-container {
   border-color: rgba(255, 255, 255, 0.12);
   background: rgba(26, 26, 26, 0.36);
   box-shadow:
-    0 18px 34px rgba(0, 0, 0, 0.3),
+    0 12px 26px rgba(0, 0, 0, 0.26),
     inset 0 1px 0 rgba(255, 255, 255, 0.08);
 }
 
 #mate-sidebar.is-dark .mate-sidebar-toggle {
   color: rgba(240, 240, 240, 0.92);
-}
-
-#mate-sidebar.is-dark .mate-nav-step {
-  color: rgba(255, 255, 255, 0.38);
 }
 
 #mate-sidebar.is-dark .mate-nav-step:hover:not(:disabled) {
@@ -708,7 +718,7 @@
 }
 
 #mate-sidebar.is-dark .chrono-nav-toc-time {
-  color: rgba(225, 225, 225, 0.48);
+  color: rgba(225, 225, 225, 0.42);
 }
 
 #mate-sidebar.is-dark .chrono-nav-toc-btn {

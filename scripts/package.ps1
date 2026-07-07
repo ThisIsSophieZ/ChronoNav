@@ -71,11 +71,28 @@ foreach ($d in $includeDirs) {
 }
 
 # Create the ZIP (manifest.json at archive root).
+# NOTE: do NOT use Compress-Archive here. On Windows PowerShell 5.1 it writes
+# sub-directory entries with backslash separators (e.g. "_locales\en\messages.json"),
+# which violates the ZIP spec (entries must use "/"). Chrome then treats the whole
+# string as one filename starting with "_" and refuses to load the extension.
+# We build entries manually via System.IO.Compression with forward-slash names.
 $zipName = "chrononav-timeline-for-gemini-v$version.zip"
 $zipPath = Join-Path $OutputDir $zipName
 if (Test-Path $zipPath) { Remove-Item -Force $zipPath }
 
-Compress-Archive -Path (Join-Path $staging "*") -DestinationPath $zipPath -Force
+Add-Type -AssemblyName System.IO.Compression | Out-Null
+Add-Type -AssemblyName System.IO.Compression.FileSystem | Out-Null
+
+$stagingFull = (Resolve-Path $staging).Path.TrimEnd('\') + '\'
+$zip = [System.IO.Compression.ZipFile]::Open($zipPath, [System.IO.Compression.ZipArchiveMode]::Create)
+try {
+  Get-ChildItem -Path $staging -Recurse -File | ForEach-Object {
+    $entryName = $_.FullName.Substring($stagingFull.Length).Replace('\', '/')
+    [System.IO.Compression.ZipFileExtensions]::CreateEntryFromFile($zip, $_.FullName, $entryName) | Out-Null
+  }
+} finally {
+  $zip.Dispose()
+}
 
 # Clean up staging.
 Remove-Item -Recurse -Force $staging

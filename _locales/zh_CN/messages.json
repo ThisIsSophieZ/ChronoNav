@@ -95,11 +95,11 @@
     "description": "弹窗底部隐私说明。"
   },
   "firstRunTitle": {
-    "message": "ChronoNav：时间上下文默认关闭",
+    "message": "赋予 Gemini 时间感知",
     "description": "首次运行提示标题。"
   },
   "firstRunBody": {
-    "message": "开启后，ChronoNav 会在你发送给 Gemini 的提示词中加入本地日期、时间与 UTC 偏移量，帮助 Gemini 更好地理解时序。该信息会作为你的 Gemini 请求的一部分发送给 Google，并可能被 Google 保存。你可随时在扩展弹窗或侧栏开关中关闭。",
+    "message": "开启“时间上下文”后，ChronoNav 会在你发往 Gemini 的消息中附加当前本地时间，帮助 Gemini 理解与时间相关的语境。你可以随时点击时钟图标关闭。",
     "description": "首次运行提示正文。"
   },
   "firstRunEnable": {
@@ -107,7 +107,7 @@
     "description": "首次运行提示的开启按钮。"
   },
   "firstRunDismiss": {
-    "message": "暂不开启",
+    "message": "保持关闭",
     "description": "首次运行提示的关闭按钮。"
   }
 }
