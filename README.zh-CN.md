@@ -102,6 +102,8 @@ powershell -ExecutionPolicy Bypass -File .\scripts\package.ps1
 
 欢迎提交 PR 或 [Issue](https://github.com/ThisIsSophieZ/ChronoNav/issues)。修改源码后，在扩展页点击「重新加载」并刷新 Gemini 即可生效。
 
+贡献指南见 [CONTRIBUTING.md](./CONTRIBUTING.md)。如需私下报告安全或隐私问题，请发送邮件至 [hi@thebrownielab.com](mailto:hi@thebrownielab.com)，或查看 [SECURITY.md](./SECURITY.md)。
+
 ---
 
 ## 📄 许可

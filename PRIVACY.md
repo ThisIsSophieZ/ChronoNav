@@ -88,6 +88,9 @@ revised "Last updated" date.
 Questions or concerns? Please open an issue:
 https://github.com/ThisIsSophieZ/ChronoNav/issues
 
+For privacy-sensitive questions, you can also email:
+hi@thebrownielab.com
+
 ---
 
 ## 简体中文
@@ -155,3 +158,6 @@ ChronoNav（“本扩展”）是面向 Gemini 网页版（`https://gemini.googl
 
 如有疑问，请提交 issue：
 https://github.com/ThisIsSophieZ/ChronoNav/issues
+
+如涉及隐私敏感问题，也可以发送邮件至：
+hi@thebrownielab.com

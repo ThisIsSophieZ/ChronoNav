@@ -102,6 +102,8 @@ A minimal architecture with zero build step:
 
 PRs and [issues](https://github.com/ThisIsSophieZ/ChronoNav/issues) are welcome. After editing the source, hit "Reload" on the extensions page and refresh Gemini.
 
+For contribution guidelines, see [CONTRIBUTING.md](./CONTRIBUTING.md). For private security or privacy reports, email [hi@thebrownielab.com](mailto:hi@thebrownielab.com) or see [SECURITY.md](./SECURITY.md).
+
 ---
 
 ## 📄 License

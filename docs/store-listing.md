@@ -198,4 +198,4 @@ The extension uses chrome.storage.local only to persist the user's local feature
 
 - Official URL / 官网：`https://github.com/ThisIsSophieZ/ChronoNav`
 - Support / 支持：`https://github.com/ThisIsSophieZ/ChronoNav/issues`
-- 联系邮箱：在 Developer Dashboard 账号设置中填写并完成验证（商店必填）。
+- 联系邮箱：`hi@thebrownielab.com`（在 Developer Dashboard 账号设置中填写并完成验证，商店必填）。
