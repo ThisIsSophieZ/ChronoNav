@@ -1,11 +1,5 @@
 # ⏱️ ChronoNav — Timeline for Gemini
 
-🚀 Available on Chrome Web Store
-
-🚀 Install:
-https://chromewebstore.google.com/detail/phcknoabakcbekcpfghehngmpgaodabd
-
-
 [简体中文](./README.zh-CN.md) · **English**
 
 > Give Gemini real time awareness, and navigate long conversations through a one-click timeline.
