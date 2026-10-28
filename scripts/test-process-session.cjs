@@ -60,7 +60,9 @@ function harness() {
       return xhr.body;
     },
     enable() { window.dispatchEvent(new CustomEvent('chrono-nav-settings', { detail: { enabled: true } })); },
-    sync(prompt) { window.dispatchEvent(new CustomEvent('chrono-nav-prompt-sync', { detail: { text: prompt } })); },
+    sync(prompt, sending = false) {
+      window.dispatchEvent(new CustomEvent('chrono-nav-prompt-sync', { detail: { text: prompt, sending } }));
+    },
   };
 }
 
@@ -85,6 +87,18 @@ test('UTF-8 prompts crossing protobuf varint length boundaries remain intact', (
   const prompt = '你好 Gemini '.repeat(30);
   h.enable();
   h.sync(prompt);
+  const result = h.send(prompt);
+  const decoded = Buffer.from(new URLSearchParams(result).get('req0___data__'), 'base64').toString('utf8');
+  assert.match(decoded, /\[System Time:/);
+  assert.ok(decoded.endsWith(prompt));
+});
+
+test('Enter send survives the editor clearing before the XHR starts', () => {
+  const h = harness();
+  const prompt = 'CN-SMOKE-MANUAL-04';
+  h.enable();
+  h.sync(prompt, true);
+  h.sync(''); // Gemini clears the editor and a keyup/input event follows.
   const result = h.send(prompt);
   const decoded = Buffer.from(new URLSearchParams(result).get('req0___data__'), 'base64').toString('utf8');
   assert.match(decoded, /\[System Time:/);

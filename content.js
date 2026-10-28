@@ -184,10 +184,10 @@
     });
   } catch (_) {}
 
-  function syncPromptText(text) {
+  function syncPromptText(text, sending = false) {
     window.dispatchEvent(
       new CustomEvent(EVT, {
-        detail: { text: text == null ? "" : String(text) },
+        detail: { text: text == null ? "" : String(text), sending },
       })
     );
   }
@@ -450,7 +450,7 @@
       const editor = getPrimaryEditor();
       if (!editor) return;
       const text = readEditorText(editor);
-      syncPromptText(text);
+      syncPromptText(text, true);
       captureSendTime(text);
     };
 

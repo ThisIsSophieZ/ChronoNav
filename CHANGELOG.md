@@ -2,6 +2,12 @@
 
 ## Unreleased
 
+### 2026-10-28 — Enter send timing follow-up
+
+- Release smoke testing found one same-tab Enter send (`CN-SMOKE-MANUAL-04`) without a persisted System Time marker, while the preceding button send (`CN-SMOKE-MANUAL-03`) persisted. This blocks review sign-off until the new candidate passes a browser retest.
+- Preserved the send-time prompt across the input editor clearing before the outbound `processSession` XHR starts. Matching remains exact and expires after 15 seconds; other request formats and the marker position are unchanged.
+- Local validation: 6 focused tests pass, including the editor-clear-before-XHR sequence; browser revalidation is pending.
+
 ### 2026-10-28 — Gemini processSession time injection
 
 - Confirmed in a live Chrome Web Store v1.0.0 session that Gemini now sends plain-text prompts to `geminiweb-pa.clients6.google.com/v1/processSession` as Base64-encoded protobuf. The old injector does not handle that endpoint; both a new-chat first message and a second message had no System Time in the outgoing prompt, and their temporary timeline times disappeared after refresh.

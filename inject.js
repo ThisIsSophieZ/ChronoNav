@@ -9,6 +9,8 @@
   const PREFIX_FMT = "[System Time: ";
 
   let lastPrompt = "";
+  let sendingPrompt = "";
+  let sendingPromptAt = 0;
 
   /**
    * 注入设置由隔离世界的 content.js 经 chrome.storage 读出后通过事件下发。
@@ -73,6 +75,10 @@
     (e) => {
       if (e && e.detail && typeof e.detail.text === "string") {
         lastPrompt = e.detail.text;
+        if (e.detail.sending && normalizeText(lastPrompt)) {
+          sendingPrompt = lastPrompt;
+          sendingPromptAt = Date.now();
+        }
       }
     },
     true
@@ -281,7 +287,8 @@
    * Accept only that exact shape; leave attachments and unknown variants untouched.
    */
   function augmentProcessSession(bodyStr) {
-    if (typeof bodyStr !== "string" || !lastPrompt) return bodyStr;
+    const recentSend = Date.now() - sendingPromptAt < 15000 ? sendingPrompt : "";
+    if (typeof bodyStr !== "string" || (!lastPrompt && !recentSend)) return bodyStr;
     const parts = bodyStr.split("&");
     const index = parts.findIndex((part) => part.startsWith("req0___data__="));
     if (index < 0) return bodyStr;
@@ -315,7 +322,11 @@
       const promptLength = readVarint(bytes, cursor);
       if (!promptLength || promptLength.value !== bytes.length - promptLength.next) return bodyStr;
       const prompt = new TextDecoder("utf-8", { fatal: true }).decode(bytes.subarray(promptLength.next));
-      if (normalizeText(prompt) !== normalizeText(lastPrompt) || /^\s*\[System Time:/i.test(prompt)) {
+      const normalized = normalizeText(prompt);
+      if (
+        (normalized !== normalizeText(lastPrompt) && normalized !== normalizeText(recentSend)) ||
+        /^\s*\[System Time:/i.test(prompt)
+      ) {
         return bodyStr;
       }
 
@@ -328,6 +339,7 @@
         nextBinary += String.fromCharCode(...next.subarray(i, i + 8192));
       }
       parts[index] = "req0___data__=" + encodeURIComponent(btoa(nextBinary));
+      sendingPrompt = "";
       return parts.join("&");
     } catch (_) {
       return bodyStr;
