@@ -31,8 +31,10 @@ chrome-extension, gemini, productivity, timeline, privacy-first, mv3
 - [ ] Confirm Time Context is off by default.
 - [ ] Confirm the extension only requests `storage` and `https://gemini.google.com/*`.
 - [ ] Confirm `docs/store-listing.md` matches the dashboard copy.
+- [ ] Replace any unqualified "no external servers" claim in the live listing with the precise opt-in Gemini request disclosure in `docs/store-listing.md`.
 - [ ] Confirm screenshots are 1280×800 or 640×400 and show actual product behavior.
 - [ ] Confirm the privacy policy URL points to the public repository.
+- [ ] Confirm the linked public `PRIVACY.md` contains the v1.0.1 disclosure and updated date.
 - [ ] Confirm Chrome Web Store contact email is verified: `hi@thebrownielab.com`.
 
 ## After Chrome Web Store approval

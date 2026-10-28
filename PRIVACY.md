@@ -1,7 +1,7 @@
 # Privacy Policy / 隐私政策
 
 **Extension / 扩展名称:** ChronoNav - Timeline for Gemini
-**Last updated / 最后更新:** 2026-07-07
+**Last updated / 最后更新:** 2026-10-29
 
 [English](#english) · [简体中文](#简体中文)
 
@@ -34,7 +34,7 @@ device, within the normal Gemini request flow:
   to Gemini, the extension prepends a local system timestamp with a numeric UTC offset
   only — for example `[System Time: 2026-06-18 21:34 +08:00]` (minute precision) or
   `[System Time: 2026-06-18 21:34:12 +08:00]` (second precision) — in front of your
-  prompt before it is sent to **`gemini.google.com`**. No IANA time zone, city, location, account, or device
+  prompt before it is sent to **Google's Gemini service**. No IANA time zone, city, location, account, or device
   information is included. This data travels only with that request to Google and is
   never sent to any other destination. The timestamp is generated on your device from
   your local clock. **Note:** the extension keeps this prefix hidden in the page UI
@@ -56,11 +56,10 @@ usage analytics.
 
 ### Data sharing
 
-The extension sends **no** data to the developer, to any analytics service, or to any
-server other than `gemini.google.com` itself. The only network interaction involved
-in this feature is the normal Gemini request flow initiated by the user. When time
-context is on, the timestamp travels inside that request to Google (as described above)
-and goes nowhere else.
+The extension sends **no** data to the developer or to any analytics service. It
+does not initiate a separate network request for this feature. When time context is
+on, the timestamp travels inside the normal Gemini request initiated by the user
+to Google's Gemini service, which may use Google-operated backend hosts.
 
 ### Permissions
 
@@ -113,7 +112,7 @@ ChronoNav（“本扩展”）是面向 Gemini 网页版（`https://gemini.googl
 为实现功能，本扩展会在你的设备本地、在正常的 Gemini 请求流程内进行以下处理：
 
 - **系统时间锚点（需手动开启）。** 当该功能开启且你向 Gemini 发送消息时，本扩展会在提示词
-  发送至 **`gemini.google.com`** 之前，于本地追加一段仅带数字 UTC 偏移量的本地系统时间，
+  发送至 **Google 的 Gemini 服务**之前，于本地追加一段仅带数字 UTC 偏移量的本地系统时间，
   例如 `[System Time: 2026-06-18 21:34 +08:00]`（分钟精度）或
   `[System Time: 2026-06-18 21:34:12 +08:00]`（秒精度）。其中**不含** IANA 时区、
   城市、定位、账号或设备信息。该数据仅随这条发往 Google 的请求一同发出，不会被发送到
@@ -132,9 +131,9 @@ ChronoNav（“本扩展”）是面向 Gemini 网页版（`https://gemini.googl
 
 ### 数据共享
 
-本扩展**不会把数据发送给开发者、任何分析服务，或除 `gemini.google.com` 本身以外的
-任何服务器**。与该功能相关的唯一网络交互，是由用户主动发起的正常 Gemini 请求流程。开启
-时间上下文后，时间戳会随这条请求发往 Google（如上文所述），不会发往其他任何地方。
+本扩展**不会把数据发送给开发者或任何分析服务**，也不会为此功能另行发起网络请求。
+开启时间上下文后，时间戳会随用户主动发起的正常 Gemini 请求发送至 Google 的 Gemini
+服务；该服务可能使用由 Google 运营的后端域名。
 
 ### 权限说明
 

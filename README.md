@@ -73,7 +73,7 @@ ChronoNav is local-first, with a minimal permission surface.
 
 - **No developer data collection**: no analytics, no tracking, no ads, nothing sent to the developer.
 - **Off by default & transparent**: time context stays off until you opt in.
-- **Minimal requests**: when enabled, only the timestamp and a numeric UTC offset are added locally before your prompt is sent to `gemini.google.com`. Nothing is sent to any third-party server other than Gemini itself.
+- **Minimal requests**: when enabled, only the timestamp and a numeric UTC offset are added locally before your prompt is sent to Google's Gemini service. Nothing is sent to any third-party server other than Gemini itself.
 - **Clear data boundary**: that timestamp does go to Google, and may be stored under Gemini / Google's data-handling rules.
 - **Restrained permissions**: a content script runs only on `gemini.google.com` to read the page DOM, plus the non-sensitive `storage` permission to save local preferences (toggle / precision); no `tabs`, `cookies`, or sync `storage`.
 

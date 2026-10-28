@@ -73,7 +73,7 @@ As an independent developer, I take data security seriously. ChronoNav runs enti
 
 - Minimal Permissions: It requests only the non-sensitive "storage" permission (to remember your toggle and precision settings locally) plus site access limited to Gemini (gemini.google.com)—nothing else.
 
-- You're in Control: Time Context is entirely opt-in. Only when you switch it on does the timestamp get sent to gemini.google.com along with your normal request (it's hidden in the UI, but it is still sent to Google's model as background context). The timeline itself is built entirely on your device, using only the messages already loaded on the current page.
+- You're in Control: Time Context is entirely opt-in. Only when you switch it on does the timestamp get sent to Google's Gemini service along with your normal request (it's hidden in the UI, but it is still sent to Google's model as background context). The timeline itself is built entirely on your device, using only the messages already loaded on the current page.
 
 Disclaimer: ChronoNav is a third-party extension built by an independent developer. It is not affiliated with, sponsored by, or endorsed by Google or Gemini.
 ```
@@ -109,7 +109,7 @@ ChronoNav 是专为解决这些体验而诞生的独立扩展，让你的 AI 工
 
 - 最小权限：仅申请非敏感的 storage 权限（用于在本地保存你的开关与精度偏好），以及仅限于 Gemini（gemini.google.com）的站点访问权限，别无其他。
 
-- 按需授权：时间上下文功能完全由你掌控。当且仅当你主动开启时，时间戳才会在提示词发送至 gemini.google.com 之前于本地加入（页面 UI 会隐藏该前缀以减少视觉干扰，但时间戳仍是发送给 Gemini 的提示词上下文的一部分）。时间线导航则完全基于当前页面已加载的消息在本地生成。
+- 按需授权：时间上下文功能完全由你掌控。当且仅当你主动开启时，时间戳才会在提示词发送至 Google 的 Gemini 服务之前于本地加入（页面 UI 会隐藏该前缀以减少视觉干扰，但时间戳仍是发送给 Gemini 的提示词上下文的一部分）。时间线导航则完全基于当前页面已加载的消息在本地生成。
 
 免责声明：ChronoNav 是一款由独立开发者构建的第三方扩展工具，与 Google 或 Gemini 没有任何官方关联、赞助或背书。
 ```
@@ -172,7 +172,7 @@ The extension uses chrome.storage.local only to persist the user's local feature
 
 - 是否收集或使用以下用户数据？
   - 个人身份信息 / 健康 / 财务 / 认证信息 / 个人通讯 / 位置 / 网页历史 / 用户活动：**均不收集**。
-  - 网站内容（Website content）：扩展会在本地读取页面中用户消息文本以渲染大纲，但**不传输、不存储**到扩展之外；如 Dashboard 要求按“在设备本地处理、不传输”口径如实勾选。
+  - 网站内容（Website content）：**如实披露本地使用**。扩展会读取页面中已加载的用户消息文本以渲染大纲，但不向开发者传输，也不由扩展持久化；即使仅在设备本地处理，仍需在 Dashboard 中披露。
   - 用户输入内容 / Prompt：当用户开启时间上下文后，扩展会在提示词发送至 Gemini 之前于本地加入时间戳与数字 UTC 偏移量（默认关闭，不含定位/账号/设备）；开发者不接收、不存储、不转发该内容。
 - 三项合规承诺（均需勾选 / 如实确认）：
   - 不将用户数据出售或转让给第三方（用于非核准用途）。
@@ -199,3 +199,15 @@ The extension uses chrome.storage.local only to persist the user's local feature
 - Official URL / 官网：`https://github.com/ThisIsSophieZ/ChronoNav`
 - Support / 支持：`https://github.com/ThisIsSophieZ/ChronoNav/issues`
 - 联系邮箱：`hi@thebrownielab.com`（在 Developer Dashboard 账号设置中填写并完成验证，商店必填）。
+
+---
+
+## 12. Existing live listing copy to reconcile before v1.0.1 / 现有商店文案核对
+
+The published v1.0.0 listing has used the phrase "no external servers" in its privacy paragraph. For v1.0.1, replace that unqualified phrase with this accurate wording in the Developer Dashboard (and in any localized listing that uses it):
+
+```text
+No tracking, ads, analytics, or separate network requests by ChronoNav. When Time Context is on, the timestamp is added to your prompt and sent through the normal request to Google's Gemini service.
+```
+
+已发布的 v1.0.0 商店说明曾使用“no external servers”。提交 v1.0.1 时，请在开发者后台及对应本地化文案中改用上面的明确表述，并核对隐私政策链接已指向更新后的公开页面。
