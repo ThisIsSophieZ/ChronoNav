@@ -67,15 +67,24 @@
   ];
 
   let lastTocSignature = "";
+  let lastRenderedNodes = [];
   let lastCapturedPrompt = "";
   let lastCapturedAt = 0;
 
   /** Match a captured send to its new message, including the first sidebar render. */
   const pendingPromptTimes = [];
   const PENDING_TIME_TTL_MS = 30000;
+  let newChatTimeHandoff = null;
+  let lastRenderedPathname = location.pathname;
+  // Bounded, page-local diagnostics: no prompt text, chat IDs, or request bodies.
+  const timeDiagnostics = {
+    build: "2026-10-28-route-handoff",
+    sendsCaptured: 0, pendingMatched: 0, routeTransfers: 0,
+    lastSendStatus: "none", lastSendNodeCount: 0, lastMatchedIndex: null,
+  };
   const nodeMetaMap = new WeakMap();
   /**
-   * 持久化的时间/颜色缓存，key = `${index}\u0000${归一化正文}`。
+   * 持久化的时间/颜色缓存，key = `${对话路径}\u0000${index}\u0000${归一化正文}`。
    * nodeMetaMap 以 DOM 节点为键，Gemini 重渲染替换旧节点后即丢失；此 Map 不随节点对象失效，
    * 用于在节点被替换后恢复已记录的时间，修复「旧消息时间显示丢失」问题。
    */
@@ -85,7 +94,7 @@
   /**
    * 容忍方括号内任意内容（日期时间、时区后缀等都可变）。刻意「不」行首锚定：
    * 刷新后的历史气泡聚合文本开头可能带换行 / UI 文本，锚定会匹配失败导致既不隐藏也不解析时间。
-   * 这里用「任意位置匹配」+ 全局版本，配合 SYSTEM_TIME_ONLY_RE 判定「整段仅为前缀」的块级元素。
+   * 这里用「任意位置匹配」+ 全局版本，配合 SYSTEM_TIME_ONLY_RE 判定「整段仅为时间标记」的块级元素。
    */
   const SYSTEM_TIME_FIND_RE = /\[System Time:[^\]]*\]/i;
   const SYSTEM_TIME_FIND_GLOBAL_RE = /\[System Time:[^\]]*\]\s*\n?/gi;
@@ -171,6 +180,7 @@
         currentSettings.enabled = changes[SK_ENABLED].newValue === true;
         if (!currentSettings.enabled) {
           pendingPromptTimes.length = 0;
+          newChatTimeHandoff = null;
           lastCapturedPrompt = "";
           lastCapturedAt = 0;
         }
@@ -188,10 +198,10 @@
     });
   } catch (_) {}
 
-  function syncPromptText(text) {
+  function syncPromptText(text, sending = false) {
     window.dispatchEvent(
       new CustomEvent(EVT, {
-        detail: { text: text == null ? "" : String(text) },
+        detail: { text: text == null ? "" : String(text), sending },
       })
     );
   }
@@ -239,14 +249,27 @@
   function captureSendTime(text) {
     // 时间上下文关闭时不注入，也不应在本地缓存发送时刻；否则关闭期间发送的消息
     // 会留下一个从未发给 Gemini 的时间，重新开启后被 CSS 取消隐藏即“凭空出现”。
-    if (!currentSettings.enabled) return;
+    if (!currentSettings.enabled) {
+      timeDiagnostics.lastSendStatus = "disabled";
+      return;
+    }
     const normalized = normalizePromptText(text);
-    if (!normalized) return;
+    if (!normalized) {
+      timeDiagnostics.lastSendStatus = "empty-editor";
+      return;
+    }
     const now = Date.now();
     if (normalized === lastCapturedPrompt && now - lastCapturedAt < 1200) {
       return;
     }
     const nodes = findUserMessageNodes();
+    if (location.pathname === "/app" && nodes.length === 0) {
+      clearNewChatTimeCache();
+      newChatTimeHandoff = null;
+    }
+    timeDiagnostics.sendsCaptured++;
+    timeDiagnostics.lastSendStatus = "captured";
+    timeDiagnostics.lastSendNodeCount = nodes.length;
     pendingPromptTimes.push({
       text: normalized,
       hhmm: formatClockTime(),
@@ -262,10 +285,10 @@
   }
 
   /**
-   * 从原始文本解析注入的时间戳；有则返回日期(YYYY-MM-DD)、HH:mm 与剥离后的正文。
+   * 从原始文本任意位置解析注入的时间戳；兼容旧版开头和新版末尾的时间标记。
    * 无匹配则视为历史或其它数据，不使用 new Date() 伪造时间。
    */
-  function parseLeadingSystemTime(raw) {
+  function parseSystemTime(raw) {
     const s = String(raw || "");
     const m = s.match(SYSTEM_TIME_FIND_RE);
     if (!m) {
@@ -276,7 +299,7 @@
         stripped: s.replace(/\s+/g, " ").trim(),
       };
     }
-    // 从匹配到的前缀段里提取日期与时刻。日期段 YYYY-MM-DD 无冒号，时区 +08:00 在时刻之后，
+    // 从匹配到的时间标记里提取日期与时刻。日期段 YYYY-MM-DD 无冒号，时区 +08:00 在时刻之后，
     // 故首个「时:分」即为发送时刻、首个「年-月-日」即为发送日期。
     const dateMatch = m[0].match(/(\d{4})-(\d{2})-(\d{2})/);
     const ymd = dateMatch ? dateMatch[0] : null;
@@ -316,11 +339,27 @@
     const inner =
       el.querySelector("div.query-content") ||
       el.querySelector('[data-content="user-message"]') ||
-      el.querySelector("message-content");
-    return (inner ? inner.innerText : el.innerText) || el.textContent || "";
+      el.querySelector("message-content") ||
+      el;
+    // Gemini now includes a screen-reader heading containing the full prompt
+    // alongside the visible message lines. Read the lines directly so the
+    // heading does not duplicate the timeline label. textContent also keeps a
+    // System Time line readable after it has been hidden with display:none.
+    const lines = inner.querySelectorAll("p.query-text-line");
+    if (lines.length) {
+      return Array.from(lines, (line) => line.textContent || "").join("\n");
+    }
+    // Older/different message markup: exclude accessibility-only duplicates.
+    const copy = inner.cloneNode(true);
+    copy
+      .querySelectorAll(".screen-reader-user-query-label, .cdk-visually-hidden, [class*='screen-reader']")
+      .forEach((node) => node.remove());
+    copy.querySelectorAll("br").forEach((node) => node.replaceWith("\n"));
+    copy.querySelectorAll("p, div, li, pre, blockquote").forEach((node) => node.prepend("\n"));
+    return copy.textContent || "";
   }
 
-  /** 元素的整段文本是否「只有」[System Time: ...]（即前缀独占一个块级元素 / 一行，如 Gemini 的 <p class="query-text-line">）。 */
+  /** 元素的整段文本是否「只有」[System Time: ...]（时间标记独占一个块级元素 / 一行）。 */
   const SYSTEM_TIME_ONLY_RE = /^\s*\[System Time:[^\]]*\]\s*$/i;
 
   /**
@@ -329,19 +368,19 @@
    * 关键修正：刻意「不」做行首锚定守卫。刷新后的历史气泡聚合 innerText 开头常带换行 / 前置内容，
    * 旧的 `^\s*\[System Time:` 守卫会匹配失败而整体提前返回 —— 这正是「<p> 没被隐藏、TOC 时间也丢」的真因。
    *
-   * 现在直接「全子树扫描」：命中「整段仅为前缀」的块级元素就用内联 display:none 隐藏
+   * 现在直接「全子树扫描」：命中「整段仅为时间标记」的块级元素就用内联 display:none 隐藏
    * （改样式而非文本，Angular 重渲染文本时不接管我们的 inline style，能扛住反复水合）。
-   * 只有当前缀与正文同处一个元素（<br> 软换行）时，才退回删除前缀文本节点。
+   * 只有当时间标记与正文同处一个元素（<br> 软换行）时，才退回删除标记文本节点。
    */
-  function stripSystemTimePrefixFromDom(userEl) {
+  function hideSystemTimeInDom(userEl) {
     if (!userEl || !userEl.querySelectorAll) return;
 
-    // 策略 A：隐藏「整段仅为前缀」的块级元素（不依赖聚合文本是否以前缀开头）。
+    // 策略 A：隐藏「整段仅为时间标记」的块级元素（不依赖它在正文前后的位置）。
     let hidByElement = false;
     const candidates = userEl.querySelectorAll("p, div, span, li, pre, code, blockquote");
     for (const el of candidates) {
       if (!SYSTEM_TIME_ONLY_RE.test(el.textContent || "")) continue;
-      // 若它内部还套着更深的「纯前缀」元素，跳过外层、只隐藏最内层那个，减少误伤。
+      // 若它内部还套着更深的「纯时间标记」元素，跳过外层、只隐藏最内层那个，减少误伤。
       if (
         Array.prototype.some.call(el.children, (c) => SYSTEM_TIME_ONLY_RE.test(c.textContent || ""))
       ) {
@@ -353,13 +392,13 @@
     }
     if (hidByElement) return;
 
-    // 策略 B（兜底）：前缀与正文在同一元素（<br> 软换行）——删掉文本节点里的前缀段（不限位置）。
+    // 策略 B（兜底）：时间标记与正文在同一元素（<br> 软换行）——删掉文本节点里的标记（不限位置）。
     const inner =
       userEl.querySelector("div.query-content") ||
       userEl.querySelector('[data-content="user-message"]') ||
       userEl.querySelector("message-content") ||
       userEl;
-    const raw = inner.innerText != null ? inner.innerText : inner.textContent || "";
+    const raw = getRawMessageText(userEl);
     if (!SYSTEM_TIME_FIND_RE.test(raw)) return;
 
     function stripFromTextNode(textNode) {
@@ -443,9 +482,12 @@
 
     const onSendHint = () => {
       const editor = getPrimaryEditor();
-      if (!editor) return;
+      if (!editor) {
+        timeDiagnostics.lastSendStatus = "no-editor";
+        return;
+      }
       const text = readEditorText(editor);
-      syncPromptText(text);
+      syncPromptText(text, true);
       captureSendTime(text);
     };
 
@@ -535,14 +577,8 @@
 
   function getMessageText(el) {
     const raw = getRawMessageText(el);
-    const parsed = parseLeadingSystemTime(raw);
-    let body = parsed.stripped;
-    body = body
-      .replace(/^you said\s+/i, "")
-      .replace(/^你说[:：]?\s*/i, "")
-      .replace(/\s+/g, " ")
-      .trim();
-    return body;
+    const parsed = parseSystemTime(raw);
+    return parsed.stripped;
   }
 
   function truncatePreviewText(text, maxChars) {
@@ -551,10 +587,14 @@
     return clean.length > maxChars ? `${clean.slice(0, maxChars)}…` : clean;
   }
 
-  function computeTocSignature(nodes) {
+  function computeTocSignature(rows) {
     return (
-      `${nodes.length}:` +
-      nodes.map((node, index) => `${index}:${getMessageText(node)}`).join("|")
+      `${location.pathname}${location.search}:${rows.length}:` +
+      rows
+        .map((row, index) =>
+          `${index}:${row.parsed.ymd || ""}:${row.parsed.hhmm || ""}:${getMessageText(row.node)}`
+        )
+        .join("|")
     );
   }
 
@@ -593,6 +633,36 @@
     return meta;
   }
 
+  function clearNewChatTimeCache() {
+    for (const key of tocMetaCache.keys()) {
+      if (key.startsWith("/app\u0000") || key.startsWith("/app?")) tocMetaCache.delete(key);
+    }
+  }
+
+  function restoreNewChatTime(rows) {
+    const handoff = newChatTimeHandoff;
+    if (!handoff) return false;
+    if (Date.now() >= handoff.expiresAt || !currentSettings.enabled) {
+      newChatTimeHandoff = null;
+      return false;
+    }
+    if (location.pathname === "/app") return false;
+    if (!/^\/app\/[^/]+$/.test(location.pathname) ||
+        (handoff.targetPath && handoff.targetPath !== location.pathname)) {
+      newChatTimeHandoff = null;
+      return false;
+    }
+    handoff.targetPath = location.pathname;
+    // Gemini can clear the optimistic DOM before inserting the saved message.
+    if (!rows.length) return false;
+    newChatTimeHandoff = null;
+    if (normalizePromptText(rows[0].parsed.stripped) !== handoff.text) return false;
+    timeDiagnostics.routeTransfers++;
+    if (rows[0].parsed.hadStamp) return false;
+    rows[0].pendingHhmm = handoff.hhmm;
+    return true;
+  }
+
   /**
    * Match only messages added after the send with the same normalized text.
    * The send-time baseline works before bootstrap and excludes existing history.
@@ -603,7 +673,7 @@
     pendingPromptTimes.length = 0;
     const claimed = new Set();
     const nextIndexByText = new Map();
-    let assigned = false;
+    let assigned = restoreNewChatTime(rows);
     for (const entry of pending) {
       if (Date.now() >= entry.expiresAt) continue;
       const newChatRoute = entry.pathname === "/app" && entry.firstNewIndex === 0 &&
@@ -620,7 +690,14 @@
         continue;
       }
       claimed.add(index);
+      timeDiagnostics.pendingMatched++;
+      timeDiagnostics.lastMatchedIndex = index;
       nextIndexByText.set(entry.text, index + 1);
+      if (location.pathname === "/app" && index === 0 && entry.firstNewIndex === 0) {
+        // Retain proof of this live send after consuming its pending capture.
+        // Only the first matching message may carry it to one finalized route.
+        newChatTimeHandoff = { text: entry.text, hhmm: entry.hhmm, expiresAt: entry.expiresAt };
+      }
       if (!rows[index].parsed.hadStamp) {
         rows[index].pendingHhmm = entry.hhmm;
         assigned = true;
@@ -778,6 +855,7 @@
     if (!root || root.querySelector(".mate-list-container")) return;
     root.innerHTML = getSidebarInnerHtml();
     lastTocSignature = "";
+    lastRenderedNodes = [];
   }
 
   function getTocListEl() {
@@ -1152,23 +1230,38 @@
   }
 
   function renderToc() {
+    if (location.pathname !== lastRenderedPathname) {
+      if (location.pathname === "/app") {
+        clearNewChatTimeCache();
+        newChatTimeHandoff = null;
+      }
+      lastRenderedPathname = location.pathname;
+    }
     const root = ensureTocRoot();
     const ul = root.querySelector(`#${TOC_LIST_ID}`);
     if (!ul) return false;
     const nodes = findUserMessageNodes();
-    // 关键顺序：必须「先读含前缀的原文解析时间，再剥离 DOM」。
+    // 关键顺序：必须「先读含时间标记的原文解析时间，再剥离 DOM」。
     // 否则剥离后 DOM 里的 [System Time: ...] 已消失，刷新历史时（无 pending / 无缓存）时间就会丢成空。
     const rows = nodes.map((node) => {
       const raw = getRawMessageText(node);
-      return { node, raw, parsed: parseLeadingSystemTime(raw), pendingHhmm: null };
+      return { node, raw, parsed: parseSystemTime(raw), pendingHhmm: null };
     });
     const assignedPendingTime = assignPendingTimesToRows(rows);
+    root.dataset.chronoTiming = JSON.stringify({
+      ...timeDiagnostics, pendingCount: pendingPromptTimes.length,
+      firstHasStamp: !!(rows[0] && rows[0].parsed.hadStamp),
+    });
     for (let i = 0; i < nodes.length; i++) {
       hideSystemTimeInDom(nodes[i]);
     }
-    const signature = computeTocSignature(nodes);
-    if (!assignedPendingTime && signature === lastTocSignature) return false;
+    const signature = computeTocSignature(rows);
+    const sameNodes =
+      nodes.length === lastRenderedNodes.length &&
+      nodes.every((node, index) => node === lastRenderedNodes[index]);
+    if (!assignedPendingTime && signature === lastTocSignature && sameNodes) return false;
     lastTocSignature = signature;
+    lastRenderedNodes = nodes.slice();
     ul.innerHTML = "";
     if (!nodes.length) {
       // 主页 / 新对话等无用户消息：仅保留顶部时钟（CSS .is-empty），大纲与箭头隐藏。
@@ -1176,8 +1269,8 @@
       const li = document.createElement("li");
       li.className = "chrono-nav-toc-item chrono-nav-toc-empty";
       li.textContent = t("noMessages");
-      // 新对话 / 清空：丢弃持久缓存，避免相同 index+文本在不同会话间串味。
-      tocMetaCache.clear();
+      // Empty DOM is also a hydration state. Keep the bounded per-route cache;
+      // a return to /app or a fresh first send clears the provisional entries.
       ul.appendChild(li);
       syncMessageTracking([]);
       updateFabState();
@@ -1191,7 +1284,7 @@
       const timeDisplay = parsed.hadStamp
         ? formatTierTime(parsed.ymd, parsed.hhmm)
         : pendingHhmm || null;
-      const cacheKey = `${index}\u0000${fullText}`;
+      const cacheKey = `${location.pathname}${location.search}\u0000${index}\u0000${fullText}`;
       const meta = ensureNodeMeta(node, index, timeDisplay, cacheKey);
       const li = document.createElement("li");
       li.className = "chrono-nav-toc-item toc-item";
@@ -1267,11 +1360,12 @@
 
   function startTocObserver() {
     ensureTocRoot();
-    const target = getChatRoot();
     const obs = new MutationObserver(() => scheduleToc());
     // characterData 必不可少：刷新时 Gemini 常先插入气泡、再用文本节点更新（characterData）把
-    // 带 [System Time:] 的历史正文水合回来。只监听 childList 会漏掉这一步，导致前缀重新泄漏到明文。
-    obs.observe(target, { childList: true, subtree: true, characterData: true });
+    // 带 [System Time:] 的历史正文水合回来。只监听 childList 会漏掉这一步，导致时间标记重新泄漏到明文。
+    // Observe the stable body: Gemini can replace chat-window/infinite-scroller
+    // during SPA navigation, leaving an observer on the old root disconnected.
+    obs.observe(document.body, { childList: true, subtree: true, characterData: true });
     scheduleToc();
   }
 

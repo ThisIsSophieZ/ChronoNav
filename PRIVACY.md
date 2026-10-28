@@ -1,7 +1,7 @@
 # Privacy Policy / 隐私政策
 
 **Extension / 扩展名称:** ChronoNav - Timeline for Gemini
-**Last updated / 最后更新:** 2026-07-07
+**Last updated / 最后更新:** 2026-10-28
 
 [English](#english) · [简体中文](#简体中文)
 
@@ -31,18 +31,20 @@ To provide its features, the extension performs the following entirely on your o
 device, within the normal Gemini request flow:
 
 - **System time anchor (opt-in).** When the feature is enabled and you send a message
-  to Gemini, the extension prepends a local system timestamp with a numeric UTC offset
+  to Gemini, the extension appends a local system timestamp with a numeric UTC offset
   only — for example `[System Time: 2026-06-18 21:34 +08:00]` (minute precision) or
-  `[System Time: 2026-06-18 21:34:12 +08:00]` (second precision) — in front of your
+  `[System Time: 2026-06-18 21:34:12 +08:00]` (second precision) — after your
   prompt before it is sent to **`gemini.google.com`**. No IANA time zone, city, location, account, or device
   information is included. This data travels only with that request to Google and is
   never sent to any other destination. The timestamp is generated on your device from
-  your local clock. **Note:** the extension keeps this prefix hidden in the page UI
-  to reduce visual clutter. The timestamp remains part of the prompt context sent to
-  Gemini and may be stored by Google as part of your conversation history.
+  your local clock. **Note:** the extension hides this time marker in Gemini's desktop
+  message bubble when possible. The timestamp remains part of the prompt context sent
+  to Gemini, may appear in generated titles or on other devices, and may be stored by
+  Google as part of your conversation history.
 - **Conversation outline.** The extension reads the text of user messages currently
-  loaded in the page DOM, solely to render the navigation outline on the right side
-  of the page. This text is not stored or transmitted anywhere.
+  loaded in the page DOM to render the navigation outline on the right side of the
+  page. Message text is used and temporarily cached in memory while the page is
+  running; the extension does not persist it to storage or upload it separately.
 - **Local preferences.** The extension stores interface and feature preferences (such
   as whether the outline is collapsed, whether time context is on, and the chosen
   precision) using browser-provided local storage mechanisms. These stay on your
@@ -113,15 +115,16 @@ ChronoNav（“本扩展”）是面向 Gemini 网页版（`https://gemini.googl
 为实现功能，本扩展会在你的设备本地、在正常的 Gemini 请求流程内进行以下处理：
 
 - **系统时间锚点（需手动开启）。** 当该功能开启且你向 Gemini 发送消息时，本扩展会在提示词
-  发送至 **`gemini.google.com`** 之前，于本地追加一段仅带数字 UTC 偏移量的本地系统时间，
+  发送至 **`gemini.google.com`** 之前，在本地于提示词末尾附加一段带数字 UTC 偏移量的本地系统时间，
   例如 `[System Time: 2026-06-18 21:34 +08:00]`（分钟精度）或
   `[System Time: 2026-06-18 21:34:12 +08:00]`（秒精度）。其中**不含** IANA 时区、
   城市、定位、账号或设备信息。该数据仅随这条发往 Google 的请求一同发出，不会被发送到
-  任何其他目的地。时间由你设备的本地时钟生成。**注意：** 本扩展会在页面 UI 中隐藏该前缀
-  以减少视觉干扰；该时间戳仍是发送给 Gemini 的提示词上下文的一部分，并可能作为对话历史的
-  一部分被 Google 保存。
-- **对话大纲。** 本扩展读取页面 DOM 中当前已加载的用户消息文本，仅用于在页面右侧渲染
-  导航大纲。该文本不会被存储或传输到任何地方。
+  任何其他目的地。时间由你设备的本地时钟生成。**注意：** 本扩展会尽量在 Gemini 桌面网页
+  的消息气泡中隐藏该时间标记；它仍是发送给 Gemini 的提示词上下文的一部分，可能出现在自动
+  生成的标题或其他设备上，也可能作为对话历史的一部分被 Google 保存。
+- **对话大纲。** 本扩展读取页面 DOM 中当前已加载的用户消息文本，用于在页面右侧渲染
+  导航大纲。消息文本仅在页面运行期间用于生成时间轴及内存中的临时缓存；扩展不会将其
+  持久化保存或额外上传。
 - **本地偏好。** 本扩展使用浏览器提供的本地存储机制记住界面与功能偏好（例如大纲是否折叠、
   时间上下文是否开启、所选精度）。这些数据保存在你的设备本地，绝不外传。
 

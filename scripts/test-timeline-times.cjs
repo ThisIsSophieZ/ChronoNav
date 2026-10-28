@@ -24,6 +24,12 @@ function element() {
 function setup() {
   let now = new Date(2026, 9, 28, 10, 1).getTime();
   let nodes = [];
+  const events = {};
+  const editor = {
+    innerText: '', matches: () => true, contains: () => false,
+    getAttribute: key => key === 'contenteditable' ? 'true' : null,
+    getClientRects: () => [{}],
+  };
   const ul = element();
   const root = element();
   root.querySelector = () => ul;
@@ -37,6 +43,9 @@ function setup() {
     },
     document: {
       documentElement: { appendChild() {} }, createElement: element,
+      addEventListener: (type, handler) => (events[type] ??= []).push(handler),
+      querySelectorAll: () => [editor], getElementById: () => null,
+      activeElement: editor,
     },
     window: { addEventListener() {}, dispatchEvent() {} },
     chrome: {
@@ -48,6 +57,7 @@ function setup() {
   });
   // Replace browser-only boundaries, not the time or rendering logic under test.
   vm.runInContext(source.slice(0, bootStart) + `
+    if (typeof hideSystemTimeInDom !== 'function') throw new Error('Missing DOM-hide helper');
     findUserMessageNodes = testNodes;
     getRawMessageText = node => node.raw;
     ensureTocRoot = testRoot;
@@ -56,10 +66,21 @@ function setup() {
     updateFabState = () => {};
     updateInjectStatusUI = () => {};
     currentSettings.enabled = true;
+    bindInputSync();
     globalThis.api = {captureSendTime, renderToc};
   })();`, context);
   return {
     send(text) { context.api.captureSendTime(text); },
+    sendVia(text, trigger) {
+      editor.innerText = text;
+      const event = trigger === 'click' ? { target: { closest: () => ({
+        getAttribute: key => key === 'aria-label' ? 'Send message' : null,
+        textContent: '',
+      }) } } : { key: 'Enter', shiftKey: false };
+      for (const handler of events[trigger === 'click' ? 'click' : 'keydown'] || []) handler(event);
+      editor.innerText = '';
+    },
+    diagnostics() { return JSON.parse(root.dataset.chronoTiming); },
     add(raw) { nodes.push({ raw }); },
     messages(...raw) { nodes = raw.map(raw => ({ raw })); },
     route(value) { location.pathname = value; },
@@ -86,6 +107,70 @@ test('first send after an empty render survives the new-chat URL transition', ()
   const e = setup(); e.render(); e.send('first');
   e.route('/app/new-chat'); e.add('first');
   assert.deepEqual(e.render(), ['10:01']);
+});
+
+test('first time survives a URL change and replacement of the optimistic message node', () => {
+  const e = setup(); e.render(); e.send('first'); e.add('first');
+  assert.deepEqual(e.render(), ['10:01']);
+  e.route('/app/new-chat'); e.messages('first');
+  assert.deepEqual(e.render(), ['10:01']);
+  e.advance(60000); e.send('second'); e.add('second');
+  assert.deepEqual(e.render(), ['10:01', '10:02']);
+});
+
+for (const trigger of ['click', 'enter']) {
+  test(`${trigger}: captured first time survives route promotion and a transient empty DOM`, () => {
+    const e = setup(); e.render(); e.sendVia('private prompt', trigger); e.add('private prompt');
+    assert.deepEqual(e.render(), ['10:01']);
+    e.route('/app/private-id'); e.messages(); e.render();
+    e.messages('private prompt');
+    assert.deepEqual(e.render(), ['10:01']);
+    e.messages(); e.render(); e.messages('private prompt');
+    assert.deepEqual(e.render(), ['10:01']);
+    const diagnostics = e.diagnostics();
+    assert.equal(diagnostics.sendsCaptured, 1);
+    assert.equal(diagnostics.routeTransfers, 1);
+    assert.equal(diagnostics.firstHasStamp, false);
+    assert(!JSON.stringify(diagnostics).includes('private'));
+  });
+}
+
+test('route promotion never supplies a time to a different first message', () => {
+  const e = setup(); e.send('first'); e.add('first'); e.render();
+  e.route('/app/other'); e.messages('different');
+  assert.deepEqual(e.render(), [null]);
+  e.messages('first');
+  assert.deepEqual(e.render(), [null]);
+});
+
+test('a handoff is bound to one destination even while its DOM is empty', () => {
+  const e = setup(); e.send('first'); e.add('first'); e.render();
+  e.route('/app/destination'); e.messages(); e.render();
+  e.route('/app/other'); e.messages('first');
+  assert.deepEqual(e.render(), [null]);
+});
+
+test('expired or disabled handoffs do not supply timestamps', () => {
+  for (const expire of [true, false]) {
+    const e = setup(); e.send('first'); e.add('first'); e.render();
+    if (expire) e.advance(30000);
+    else { e.enabled(false); e.enabled(true); }
+    e.route('/app/new-chat'); e.messages('first');
+    assert.deepEqual(e.render(), [null]);
+  }
+});
+
+test('returning to the new-chat route cannot reuse its previous first-message cache', () => {
+  const e = setup(); e.send('first'); e.add('first'); e.render();
+  e.route('/app/new-chat'); e.messages('first'); e.render();
+  e.route('/app'); e.messages('first');
+  assert.deepEqual(e.render(), [null]);
+});
+
+test('explicit time markers take priority over a provisional handoff', () => {
+  const e = setup(); e.send('first'); e.add('first'); e.render();
+  e.route('/app/new-chat'); e.messages('first\n[System Time: 2026-10-28 09:55 +08:00]');
+  assert.deepEqual(e.render(), ['09:55']);
 });
 
 test('existing identical history is not assigned the new send time at bootstrap', () => {

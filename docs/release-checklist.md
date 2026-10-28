@@ -28,6 +28,7 @@ chrome-extension, gemini, productivity, timeline, privacy-first, mv3
 - [ ] Review `CHANGELOG.md`: every shipped change has a record, validation evidence, and resolved release checks.
 - [ ] Run relevant `scripts/test-*.cjs` regression tests and JavaScript syntax checks against the exact release commit. Record commands and results in `CHANGELOG.md`.
 - [ ] Reload the unpacked extension and refresh Gemini. With Time Context enabled, send three messages in a new conversation using Enter and the send button; verify all three timeline times, including the first.
+- [ ] Cover both event orders: the first message appears before the new-chat URL is finalized, and after it is finalized. Check replacement of the first message node and transient empty chat DOM states.
 - [ ] Refresh and switch away/back to that conversation. Compare missing times with the original message time markers; distinguish missing injection/persistence from timeline rendering failure.
 - [ ] Confirm untimed historical messages stay untimed, repeated prompts do not reuse another message's time, and disabling Time Context discards pending captures.
 - [ ] Confirm timeline navigation works in light/dark themes and no extension errors appear. Record actual browser results; automated mocks alone do not satisfy this gate.
@@ -47,3 +48,23 @@ chrome-extension, gemini, productivity, timeline, privacy-first, mv3
 - [ ] Create a GitHub release for the submitted version.
 - [ ] Announce gradually: personal network first, then Reddit / Hacker News / Product Hunt if early feedback is healthy.
 - [ ] Track issues manually through GitHub Issues; do not add analytics just for launch measurement.
+
+## First-message diagnostic readout
+
+For a dedicated test conversation, collect this read-only result immediately after
+the first response, before sending a second message or refreshing:
+
+```javascript
+({
+  timeline: JSON.parse(document.querySelector('#mate-sidebar')?.getAttribute('data-chrono-timing') || 'null'),
+  requests: JSON.parse(document.documentElement.getAttribute('data-chrono-requests') || '[]')
+})
+```
+
+- `sendsCaptured: 0` means no enabled, non-empty send was captured in this page session. Check `lastSendStatus` and the input/send event path.
+- `snapshot: "none"` with `draftAvailable: false` means a rewritten request had no prompt source to match. An input draft can still match when no explicit send snapshot exists.
+- `snapshot: "live"`, `candidateStrings > 0`, and `matched: false` mean the inspected strings did not equal the normalized prompt. Do not broaden matching without inspecting a sanitized structural reproduction.
+- `matched: true` and `changed: true` mean the wrapper modified the body passed to the network API, not that the server accepted or persisted it.
+- `skipped` identifies disabled injection, an unsupported content type, or an unsupported/missing body. No report can also mean that traffic bypassed these wrappers; do not infer success from an empty list.
+- `pendingMatched` and `lastMatchedIndex` show local time assignment. `routeTransfers` shows a first-message handoff to the finalized conversation route.
+- The request list retains the latest 20 structural reports only. These diagnostics contain no prompt, token, full URL, or chat ID, and reset when the page reloads. Do not attach complete request bodies or private chat content.

@@ -6,9 +6,13 @@
   const EVT = "chrono-nav-prompt-sync";
   const SETTINGS_EVT = "chrono-nav-settings";
   const READY_EVT = "chrono-nav-inject-ready";
-  const PREFIX_FMT = "[System Time: ";
+  const TIME_CONTEXT_START = "[System Time: ";
 
   let lastPrompt = "";
+  let pendingPrompt = null;
+  const PENDING_PROMPT_TTL_MS = 30000;
+  let activeMatchDiagnostic = null;
+  const recentRequestDiagnostics = [];
 
   /**
    * 注入设置由隔离世界的 content.js 经 chrome.storage 读出后通过事件下发。
@@ -22,6 +26,10 @@
     (e) => {
       if (!e || !e.detail) return;
       if (typeof e.detail.enabled === "boolean") settings.enabled = e.detail.enabled;
+      if (!settings.enabled) {
+        lastPrompt = "";
+        pendingPrompt = null;
+      }
       if (e.detail.precision === "minute" || e.detail.precision === "second") {
         settings.precision = e.detail.precision;
       }
@@ -44,7 +52,7 @@
     return sign + pad(Math.floor(abs / 60)) + ":" + pad(abs % 60);
   }
 
-  function formatPrefix() {
+  function formatTimeContext() {
     const d = new Date();
     const pad = (n) => String(n).padStart(2, "0");
     let ts =
@@ -61,7 +69,7 @@
     if (settings.precision === "second") {
       ts += ":" + pad(d.getSeconds());
     }
-    return PREFIX_FMT + ts + " " + formatTzOffset(d) + "]";
+    return TIME_CONTEXT_START + ts + " " + formatTzOffset(d) + "]";
   }
 
   function normalizeText(text) {
@@ -72,6 +80,14 @@
     EVT,
     (e) => {
       if (e && e.detail && typeof e.detail.text === "string") {
+        if (!settings.enabled) return;
+        if (e.detail.sending === true) {
+          const text = normalizeText(e.detail.text);
+          // Empty follow-up send events must not erase an in-flight snapshot.
+          if (text) pendingPrompt = { text, expiresAt: Date.now() + PENDING_PROMPT_TTL_MS };
+          lastPrompt = "";
+          return;
+        }
         lastPrompt = e.detail.text;
       }
     },
@@ -129,18 +145,69 @@
     );
   }
 
-  function prependToPrompt(text, state) {
+  function requestDiagnostic(body, transport) {
+    const pathname = location.pathname || new URL(location.href).pathname;
+    return {
+      transport,
+      route: pathname === "/app" ? "new-chat" : /^\/app\/[^/]+$/.test(pathname) ? "conversation" : "other",
+      enabled: settings.enabled,
+      snapshot: !pendingPrompt ? "none" : Date.now() >= pendingPrompt.expiresAt ? "expired" : "live",
+      draftAvailable: !!normalizeText(lastPrompt),
+      bodyType: body instanceof URLSearchParams ? "url-search-params" : typeof body,
+      candidateStrings: 0, matched: false, changed: false,
+    };
+  }
+
+  function publishRequestDiagnostic(report) {
+    // Keep only structural outcomes in this page. Never expose prompt text,
+    // URLs, chat IDs, tokens, timestamps, or request/response payloads.
+    recentRequestDiagnostics.push(report);
+    if (recentRequestDiagnostics.length > 20) recentRequestDiagnostics.shift();
+    try {
+      document.documentElement.setAttribute("data-chrono-requests", JSON.stringify(recentRequestDiagnostics));
+    } catch (_) {}
+  }
+
+  function traceBodyRewrite(body, transport, rewrite) {
+    const report = requestDiagnostic(body, transport);
+    const previous = activeMatchDiagnostic;
+    activeMatchDiagnostic = report;
+    try {
+      const result = rewrite(body);
+      report.changed = body instanceof URLSearchParams ? result.toString() !== body.toString() : result !== body;
+      return result;
+    } finally {
+      activeMatchDiagnostic = previous;
+      publishRequestDiagnostic(report);
+    }
+  }
+
+  function traceSkippedRequest(body, transport, method, url, contentType) {
+    if (method === "GET" || method === "HEAD" || !shouldAugment(url)) return;
+    const report = requestDiagnostic(body, transport);
+    report.skipped = !settings.enabled ? "disabled" :
+      !isSupportedContentType(contentType) ? "content-type" : "unsupported-or-missing-body";
+    publishRequestDiagnostic(report);
+  }
+
+  function appendToPrompt(text, state) {
     if (state.done || typeof text !== "string" || !text.length) return text;
-    const normalizedPrompt = normalizeText(lastPrompt);
+    if (activeMatchDiagnostic) activeMatchDiagnostic.candidateStrings++;
+    if (pendingPrompt && Date.now() >= pendingPrompt.expiresAt) {
+      if (normalizeText(lastPrompt) === pendingPrompt.text) lastPrompt = "";
+      pendingPrompt = null;
+    }
+    // Editor updates (including clearing the composer) cannot overwrite a send.
+    const normalizedPrompt = pendingPrompt ? pendingPrompt.text : normalizeText(lastPrompt);
     const normalizedText = normalizeText(text);
     if (!normalizedPrompt || normalizedText !== normalizedPrompt) return text;
-    const prefix = formatPrefix();
-    if (text.startsWith(prefix)) {
-      state.done = true;
-      return text;
-    }
+    if (activeMatchDiagnostic) activeMatchDiagnostic.matched = true;
     state.done = true;
-    return prefix + "\n" + text;
+    pendingPrompt = null;
+    if (normalizeText(lastPrompt) === normalizedPrompt) lastPrompt = "";
+    // Keep the user's words first so Gemini's generated chat title is more
+    // likely to summarize the prompt instead of the time context.
+    return text + "\n\n" + formatTimeContext();
   }
 
   /**
@@ -168,10 +235,10 @@
   function walkJson(value, state, seen) {
     if (value === null || value === undefined || state.done) return value;
     if (typeof value === "string") {
-      const matched = prependToPrompt(value, state);
+      const matched = appendToPrompt(value, state);
       if (state.done) return matched;
       const nested = tryParseJson(value);
-      if (nested !== null && typeof nested === "object") {
+      if (nested !== null && (typeof nested === "object" || typeof nested === "string")) {
         const augmented = walkJson(nested, state, seen);
         if (state.done) return JSON.stringify(augmented);
       }
@@ -201,11 +268,11 @@
     if (typeof str !== "string" || !str.length) return str;
     const state = { done: false };
     const parsed = tryParseJson(str);
-    if (parsed !== null && typeof parsed === "object") {
+    if (parsed !== null && (typeof parsed === "object" || typeof parsed === "string")) {
       const augmented = walkJson(parsed, state, new WeakSet());
       return state.done ? JSON.stringify(augmented) : str;
     }
-    const next = prependToPrompt(str, state);
+    const next = appendToPrompt(str, state);
     return state.done ? next : str;
   }
 
@@ -234,7 +301,7 @@
     return bodyStr;
   }
 
-  function augmentBodyString(bodyStr) {
+  function rewriteBodyString(bodyStr) {
     if (bodyStr == null || bodyStr === "") return bodyStr;
     if (/(^|&)f\.req=/.test(bodyStr)) {
       return augmentFormUrlEncoded(bodyStr);
@@ -242,9 +309,17 @@
     return augmentJsonLike(bodyStr);
   }
 
-  function augmentBody(body) {
+  function augmentBodyString(bodyStr, transport = "fetch-request") {
+    return traceBodyRewrite(bodyStr, transport, rewriteBodyString);
+  }
+
+  function augmentBody(body, transport = "fetch") {
+    return traceBodyRewrite(body, transport, rewriteBody);
+  }
+
+  function rewriteBody(body) {
     if (body == null) return body;
-    if (typeof body === "string") return augmentBodyString(body);
+    if (typeof body === "string") return rewriteBodyString(body);
     if (body instanceof URLSearchParams) {
       const next = new URLSearchParams(body.toString());
       if (next.has("f.req")) {
@@ -283,6 +358,7 @@
         !shouldAugment(req.url) ||
         !isSupportedContentType(contentType)
       ) {
+        traceSkippedRequest(init && init.body, "fetch-request", method, req.url, contentType);
         return origFetch.call(this, input, init);
       }
 
@@ -290,9 +366,10 @@
         if (typeof init.body === "string" || init.body instanceof URLSearchParams) {
           return origFetch.call(this, input, {
             ...init,
-            body: augmentBody(init.body),
+            body: augmentBody(init.body, "fetch-request"),
           });
         }
+        traceSkippedRequest(init.body, "fetch-request", method, req.url, contentType);
         return origFetch.call(this, input, init);
       }
 
@@ -317,6 +394,7 @@
       !isSupportedContentType(contentType) ||
       mergedInit.body == null
     ) {
+      traceSkippedRequest(mergedInit.body, "fetch", method, url, contentType);
       return origFetch.call(this, input, mergedInit);
     }
 
@@ -325,6 +403,7 @@
       return origFetch.call(this, input, { ...mergedInit, body: nextBody });
     }
 
+    traceSkippedRequest(mergedInit.body, "fetch", method, url, contentType);
     return origFetch.call(this, input, mergedInit);
   };
 
@@ -358,10 +437,11 @@
       !isSupportedContentType(contentType) ||
       typeof body !== "string"
     ) {
+      traceSkippedRequest(body, "xhr", method, url, contentType);
       return origSend.apply(this, arguments);
     }
 
-    const nextBody = augmentBodyString(body);
+    const nextBody = augmentBodyString(body, "xhr");
     return origSend.call(this, nextBody);
   };
 })();
