@@ -25,6 +25,12 @@ chrome-extension, gemini, productivity, timeline, privacy-first, mv3
 
 ## Before Chrome Web Store submission
 
+- [ ] Review `CHANGELOG.md`: every shipped change has a record, validation evidence, and resolved release checks.
+- [ ] Run relevant `scripts/test-*.cjs` regression tests and JavaScript syntax checks against the exact release commit. Record commands and results in `CHANGELOG.md`.
+- [ ] Reload the unpacked extension and refresh Gemini. With Time Context enabled, send three messages in a new conversation using Enter and the send button; verify all three timeline times, including the first.
+- [ ] Refresh and switch away/back to that conversation. Compare missing times with the original message time markers; distinguish missing injection/persistence from timeline rendering failure.
+- [ ] Confirm untimed historical messages stay untimed, repeated prompts do not reuse another message's time, and disabling Time Context discards pending captures.
+- [ ] Confirm timeline navigation works in light/dark themes and no extension errors appear. Record actual browser results; automated mocks alone do not satisfy this gate.
 - [ ] Run `powershell -ExecutionPolicy Bypass -File .\scripts\package.ps1`.
 - [ ] Confirm the ZIP has `manifest.json` at the root.
 - [ ] Confirm `version` in `manifest.json` matches the release.

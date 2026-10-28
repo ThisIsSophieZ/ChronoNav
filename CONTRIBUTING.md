@@ -32,6 +32,16 @@ The ZIP is written to `dist/`, which is intentionally ignored by Git.
 
 ## Pull requests
 
+### Change records and validation
+
+- Follow the repository-wide rules in `AGENTS.md`.
+- Update the fixed change log, `CHANGELOG.md`, in the same commit as each product or engineering-process change. Do not scatter release evidence across dated scratch documents.
+- Under `Unreleased`, record the date, user-visible change, cause of a bug, validation commands/results, outstanding release checks, and any limitation or rollback consideration. Use English for committed engineering records and commit messages.
+- Put regression tests in `scripts/test-*.cjs`. Run relevant tests with Node's built-in runner, for example `node --test scripts/test-timeline-times.cjs`, and run `node --check` on changed JavaScript files.
+- Use a focused `brownielab/fix-<topic>` branch for fixes. Inspect the staged diff and validate the staged snapshot when unrelated working-tree changes exist.
+- Use English Conventional Commits, for example `fix(timeline): preserve first-message timestamps`.
+- Before publication, complete `docs/release-checklist.md` against the exact release commit, then move the verified entries from `Unreleased` to a version/date heading matching `manifest.json`. A commit or push alone does not count as a release.
+
 Before opening a PR:
 
 - Test by loading the unpacked extension locally.

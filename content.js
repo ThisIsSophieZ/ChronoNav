@@ -70,8 +70,9 @@
   let lastCapturedPrompt = "";
   let lastCapturedAt = 0;
 
-  /** 仅当 DOM 中未回显时间戳时，用发送瞬间记录的 HH:mm 与「最新一条」对齐 */
+  /** Match a captured send to its new message, including the first sidebar render. */
   const pendingPromptTimes = [];
+  const PENDING_TIME_TTL_MS = 30000;
   const nodeMetaMap = new WeakMap();
   /**
    * 持久化的时间/颜色缓存，key = `${index}\u0000${归一化正文}`。
@@ -80,8 +81,6 @@
    */
   const tocMetaCache = new Map();
   const TOC_META_CACHE_MAX = 200;
-  let tocBootstrapped = false;
-  let prevUserNodeCount = 0;
 
   /**
    * 容忍方括号内任意内容（日期时间、时区后缀等都可变）。刻意「不」行首锚定：
@@ -170,6 +169,11 @@
       let touched = false;
       if (Object.prototype.hasOwnProperty.call(changes, SK_ENABLED)) {
         currentSettings.enabled = changes[SK_ENABLED].newValue === true;
+        if (!currentSettings.enabled) {
+          pendingPromptTimes.length = 0;
+          lastCapturedPrompt = "";
+          lastCapturedAt = 0;
+        }
         touched = true;
       }
       if (Object.prototype.hasOwnProperty.call(changes, SK_PRECISION)) {
@@ -242,7 +246,14 @@
     if (normalized === lastCapturedPrompt && now - lastCapturedAt < 1200) {
       return;
     }
-    pendingPromptTimes.push(formatClockTime());
+    const nodes = findUserMessageNodes();
+    pendingPromptTimes.push({
+      text: normalized,
+      hhmm: formatClockTime(),
+      firstNewIndex: nodes.length,
+      pathname: location.pathname,
+      expiresAt: now + PENDING_TIME_TTL_MS,
+    });
     if (pendingPromptTimes.length > 50) {
       pendingPromptTimes.splice(0, pendingPromptTimes.length - 50);
     }
@@ -583,30 +594,39 @@
   }
 
   /**
-   * 仅在「用户消息条数增加」且非首次 bootstrap 时，把 pending 从后往前对齐到无 [System Time:...] 的节点，
-   * 避免初次加载历史记录时误把 pending 安在最后一条历史上。
+   * Match only messages added after the send with the same normalized text.
+   * The send-time baseline works before bootstrap and excludes existing history.
+   * Consume stamped matches too, so their fallback cannot leak to a later message.
    */
   function assignPendingTimesToRows(rows) {
-    const stack = pendingPromptTimes.slice();
+    const pending = pendingPromptTimes.slice();
     pendingPromptTimes.length = 0;
-    if (!stack.length) return;
-
-    if (!tocBootstrapped) {
-      while (stack.length) pendingPromptTimes.unshift(stack.pop());
-      return;
-    }
-
-    const added = Math.max(0, rows.length - prevUserNodeCount);
-    let slots = Math.min(added, stack.length);
-    for (let i = rows.length - 1; i >= 0 && slots > 0; i--) {
-      if (!rows[i].parsed.hadStamp) {
-        rows[i].pendingHhmm = stack.pop();
-        slots--;
+    const claimed = new Set();
+    const nextIndexByText = new Map();
+    let assigned = false;
+    for (const entry of pending) {
+      if (Date.now() >= entry.expiresAt) continue;
+      const newChatRoute = entry.pathname === "/app" && entry.firstNewIndex === 0 &&
+        /^\/app\/[^/]+$/.test(location.pathname);
+      if (entry.pathname !== location.pathname && !newChatRoute) continue;
+      if (newChatRoute) entry.pathname = location.pathname;
+      entry.firstNewIndex = Math.max(entry.firstNewIndex, nextIndexByText.get(entry.text) || 0);
+      const index = rows.findIndex((row, i) =>
+        i >= entry.firstNewIndex && !claimed.has(i) &&
+        normalizePromptText(row.parsed.stripped) === entry.text
+      );
+      if (index < 0) {
+        pendingPromptTimes.push(entry);
+        continue;
+      }
+      claimed.add(index);
+      nextIndexByText.set(entry.text, index + 1);
+      if (!rows[index].parsed.hadStamp) {
+        rows[index].pendingHhmm = entry.hhmm;
+        assigned = true;
       }
     }
-    while (stack.length) {
-      pendingPromptTimes.unshift(stack.pop());
-    }
+    return assigned;
   }
 
   function isTocCollapsed() {
@@ -1142,11 +1162,12 @@
       const raw = getRawMessageText(node);
       return { node, raw, parsed: parseLeadingSystemTime(raw), pendingHhmm: null };
     });
+    const assignedPendingTime = assignPendingTimesToRows(rows);
     for (let i = 0; i < nodes.length; i++) {
-      stripSystemTimePrefixFromDom(nodes[i]);
+      hideSystemTimeInDom(nodes[i]);
     }
     const signature = computeTocSignature(nodes);
-    if (signature === lastTocSignature) return false;
+    if (!assignedPendingTime && signature === lastTocSignature) return false;
     lastTocSignature = signature;
     ul.innerHTML = "";
     if (!nodes.length) {
@@ -1155,8 +1176,6 @@
       const li = document.createElement("li");
       li.className = "chrono-nav-toc-item chrono-nav-toc-empty";
       li.textContent = t("noMessages");
-      tocBootstrapped = true;
-      prevUserNodeCount = 0;
       // 新对话 / 清空：丢弃持久缓存，避免相同 index+文本在不同会话间串味。
       tocMetaCache.clear();
       ul.appendChild(li);
@@ -1165,9 +1184,6 @@
       return true;
     }
     root.classList.remove("is-empty");
-    assignPendingTimesToRows(rows);
-    prevUserNodeCount = nodes.length;
-    tocBootstrapped = true;
 
     rows.forEach((row, index) => {
       const { node, parsed, pendingHhmm } = row;
