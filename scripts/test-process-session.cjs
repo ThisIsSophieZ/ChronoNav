@@ -93,6 +93,52 @@ test('UTF-8 prompts crossing protobuf varint length boundaries remain intact', (
   assert.ok(decoded.endsWith(prompt));
 });
 
+test('optional protobuf fields survive a matched prompt rewrite', () => {
+  const h = harness();
+  const prompt = 'CN-ENTER-REV-03 Please reply OK.';
+  const text = Buffer.from(prompt, 'utf8');
+  const inner = Buffer.concat([Buffer.from([16, 7, 10]), varint(text.length), text]);
+  const outer = Buffer.concat([Buffer.from([26, 1, 109, 8, 1, 74]), varint(inner.length), inner]);
+  const packed = Buffer.concat([Buffer.from([8, 4, 18]), varint(outer.length), outer, Buffer.from([40, 9])]);
+  const original = 'count=1&req0___data__=' + encodeURIComponent(packed.toString('base64'));
+  h.enable();
+  h.sync(prompt, true);
+  h.sync('');
+  const result = h.send(prompt, original);
+  const decoded = Buffer.from(new URLSearchParams(result).get('req0___data__'), 'base64');
+  assert.match(decoded.toString('utf8'), /\[System Time: [^\]]+\]\nCN-ENTER-REV-03 Please reply OK\./);
+  assert.deepEqual([...decoded.subarray(0, 3)], [8, 4, 18]);
+  assert.deepEqual([...decoded.subarray(-2)], [40, 9]);
+  assert.ok(decoded.includes(Buffer.from([26, 1, 109, 8, 1, 74])));
+  assert.ok(decoded.includes(Buffer.from([16, 7, 10])));
+});
+
+test('new-chat batch rewrites only the matching req1 prompt', () => {
+  const h = harness();
+  const prompt = 'CN-NEW-DIAG-01 Reply OK.';
+  const metadata = Buffer.from([10, 1, 65]).toString('base64');
+  const original = 'count=2&ofs=7&req0___data__=' + encodeURIComponent(metadata) +
+    '&req1___data__=' + encodeURIComponent(envelope(prompt).toString('base64'));
+  h.enable();
+  h.sync(prompt, true);
+  h.sync('');
+  const result = h.send(prompt, original);
+  const parts = new URLSearchParams(result);
+  assert.equal(parts.get('count'), '2');
+  assert.equal(parts.get('req0___data__'), metadata);
+  assert.match(Buffer.from(parts.get('req1___data__'), 'base64').toString('utf8'), /\[System Time: [^\]]+\]\nCN-NEW-DIAG-01 Reply OK\./);
+});
+
+test('ambiguous duplicate prompt fields remain unchanged', () => {
+  const h = harness();
+  const prompt = 'same prompt';
+  const encoded = encodeURIComponent(envelope(prompt).toString('base64'));
+  const original = 'count=2&req0___data__=' + encoded + '&req1___data__=' + encoded;
+  h.enable();
+  h.sync(prompt);
+  assert.equal(h.send(prompt, original), original);
+});
+
 test('Enter send survives the editor clearing before the XHR starts', () => {
   const h = harness();
   const prompt = 'CN-SMOKE-MANUAL-04';

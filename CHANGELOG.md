@@ -2,11 +2,19 @@
 
 ## Unreleased
 
+### 2026-10-29 — processSession envelope follow-up
+
+- Release smoke testing reproduced an intermittent missing persisted time after consecutive Enter sends: messages 3–5 lost the label after refresh, while messages 1–2 and 6–7 retained it. The failing sends reached the `processSession` XHR without a body rewrite.
+- Kept the existing opt-in setting, System Time prefix, and exact prompt match. The `processSession` parser now accepts optional protobuf sibling fields and preserves them byte-for-byte while changing only the matched prompt leaf and its enclosing lengths.
+- A new-chat first send used a two-part `processSession` batch after a 21-second delay: `req0` contained metadata and the prompt was in `req1`. The injector now checks each request part, changes only a unique exact prompt match, and retains the send snapshot for up to 60 seconds.
+- Local validation: 9 focused tests pass, including optional fields, a new-chat batch, duplicate-match rejection, and editor-clear timing.
+- Browser validation: with the single unpacked v1.0.1 QA extension enabled, a new-chat first message sent by button and a second message sent by Enter both had persisted System Time after refresh, one visible timeline time each, and hidden marker text in the visible message. With Time Context off, a third message had no marker or timeline time after refresh; turning it back on restored the first two times. One sidebar was present and no extension console errors were observed. The optional-field parser was covered by a focused test; the observed new-chat failure was the `req1` batch and delayed send.
+
 ### 2026-10-28 — Enter send timing follow-up
 
-- Release smoke testing found one same-tab Enter send (`CN-SMOKE-MANUAL-04`) without a persisted System Time marker, while the preceding button send (`CN-SMOKE-MANUAL-03`) persisted. This blocks review sign-off until the new candidate passes a browser retest.
+- Release smoke testing found one same-tab Enter send (`CN-SMOKE-MANUAL-04`) without a persisted System Time marker, while the preceding button send (`CN-SMOKE-MANUAL-03`) persisted. The later browser retest is recorded in the 2026-10-29 entry above.
 - Preserved the send-time prompt across the input editor clearing before the outbound `processSession` XHR starts. Matching remains exact and expires after 15 seconds; other request formats and the marker position are unchanged.
-- Local validation: 6 focused tests pass, including the editor-clear-before-XHR sequence; browser revalidation is pending.
+- Local validation at that stage: 6 focused tests passed, including the editor-clear-before-XHR sequence. Subsequent browser findings and the final retest are recorded above.
 
 ### 2026-10-28 — Gemini processSession time injection
 

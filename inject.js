@@ -281,69 +281,100 @@
     return result;
   }
 
+  function readFields(bytes) {
+    const fields = [];
+    let cursor = 0;
+    while (cursor < bytes.length && fields.length < 128) {
+      const tag = readVarint(bytes, cursor);
+      if (!tag || !tag.value) return null;
+      const wire = tag.value & 7;
+      const field = { tag: tag.value, lengthStart: tag.next, valueStart: tag.next };
+      if (wire === 0) {
+        const value = readVarint(bytes, tag.next);
+        if (!value) return null;
+        field.varintValue = value.value;
+        field.end = value.next;
+      } else if (wire === 2) {
+        const length = readVarint(bytes, tag.next);
+        if (!length || length.value > bytes.length - length.next) return null;
+        field.valueStart = length.next;
+        field.end = length.next + length.value;
+      } else if (wire === 1 || wire === 5) {
+        field.end = tag.next + (wire === 1 ? 8 : 4);
+        if (field.end > bytes.length) return null;
+      } else {
+        return null;
+      }
+      fields.push(field);
+      cursor = field.end;
+    }
+    return cursor === bytes.length ? fields : null;
+  }
+
+  function replaceFieldValue(bytes, field, value) {
+    const length = Uint8Array.from(writeVarint(value.length));
+    const next = new Uint8Array(field.lengthStart + length.length + value.length + bytes.length - field.end);
+    next.set(bytes.subarray(0, field.lengthStart));
+    next.set(length, field.lengthStart);
+    next.set(value, field.lengthStart + length.length);
+    next.set(bytes.subarray(field.end), field.lengthStart + length.length + value.length);
+    return next;
+  }
+
+  function onlyField(fields, tag) {
+    const matches = fields.filter((field) => field.tag === tag);
+    return matches.length === 1 ? matches[0] : null;
+  }
+
   /**
-   * Gemini's current plain-text send uses a small protobuf envelope:
-   * field 2 { field 1 = 1, field 9 { field 1 = prompt } }.
-   * Accept only that exact shape; leave attachments and unknown variants untouched.
+   * Gemini's plain-text send uses field 2 { field 1 = 1,
+   * field 9 { field 1 = prompt } }. Preserve any sibling fields byte-for-byte.
+   * Still require the unique prompt leaf to match the editor or send snapshot.
    */
   function augmentProcessSession(bodyStr) {
-    const recentSend = Date.now() - sendingPromptAt < 15000 ? sendingPrompt : "";
+    const recentSend = Date.now() - sendingPromptAt < 60000 ? sendingPrompt : "";
     if (typeof bodyStr !== "string" || (!lastPrompt && !recentSend)) return bodyStr;
     const parts = bodyStr.split("&");
-    const index = parts.findIndex((part) => part.startsWith("req0___data__="));
-    if (index < 0) return bodyStr;
-
-    try {
-      const encoded = decodeURIComponent(parts[index].slice("req0___data__=".length).replace(/\+/g, " "));
-      const binary = atob(encoded);
-      const bytes = Uint8Array.from(binary, (char) => char.charCodeAt(0));
-      let cursor = 0;
-      const field = readVarint(bytes, cursor);
-      if (!field || field.value !== 18) return bodyStr;
-      cursor = field.next;
-      const outerLength = readVarint(bytes, cursor);
-      if (!outerLength || outerLength.value !== bytes.length - outerLength.next) return bodyStr;
-      cursor = outerLength.next;
-      const kind = readVarint(bytes, cursor);
-      if (!kind || kind.value !== 8) return bodyStr;
-      cursor = kind.next;
-      const kindValue = readVarint(bytes, cursor);
-      if (!kindValue || kindValue.value !== 1) return bodyStr;
-      cursor = kindValue.next;
-      const innerField = readVarint(bytes, cursor);
-      if (!innerField || innerField.value !== 74) return bodyStr;
-      cursor = innerField.next;
-      const innerLength = readVarint(bytes, cursor);
-      if (!innerLength || innerLength.value !== bytes.length - innerLength.next) return bodyStr;
-      cursor = innerLength.next;
-      const promptField = readVarint(bytes, cursor);
-      if (!promptField || promptField.value !== 10) return bodyStr;
-      cursor = promptField.next;
-      const promptLength = readVarint(bytes, cursor);
-      if (!promptLength || promptLength.value !== bytes.length - promptLength.next) return bodyStr;
-      const prompt = new TextDecoder("utf-8", { fatal: true }).decode(bytes.subarray(promptLength.next));
-      const normalized = normalizeText(prompt);
-      if (
-        (normalized !== normalizeText(lastPrompt) && normalized !== normalizeText(recentSend)) ||
-        /^\s*\[System Time:/i.test(prompt)
-      ) {
-        return bodyStr;
-      }
-
-      const promptBytes = new TextEncoder().encode(formatPrefix() + "\n" + prompt);
-      const inner = Uint8Array.from([10, ...writeVarint(promptBytes.length), ...promptBytes]);
-      const outer = Uint8Array.from([8, 1, 74, ...writeVarint(inner.length), ...inner]);
-      const next = Uint8Array.from([18, ...writeVarint(outer.length), ...outer]);
-      let nextBinary = "";
-      for (let i = 0; i < next.length; i += 8192) {
-        nextBinary += String.fromCharCode(...next.subarray(i, i + 8192));
-      }
-      parts[index] = "req0___data__=" + encodeURIComponent(btoa(nextBinary));
-      sendingPrompt = "";
-      return parts.join("&");
-    } catch (_) {
-      return bodyStr;
+    const matches = [];
+    for (let index = 0; index < parts.length; index++) {
+      const key = parts[index].slice(0, parts[index].indexOf("="));
+      if (!/^req\d+___data__$/.test(key)) continue;
+      try {
+        const encoded = decodeURIComponent(parts[index].slice(key.length + 1).replace(/\+/g, " "));
+        const bytes = Uint8Array.from(atob(encoded), (char) => char.charCodeAt(0));
+        if (bytes.length > 1024 * 1024) continue;
+        const rootField = onlyField(readFields(bytes) || [], 18);
+        if (!rootField) continue;
+        const outer = bytes.subarray(rootField.valueStart, rootField.end);
+        const outerFields = readFields(outer);
+        if (!outerFields || onlyField(outerFields, 8)?.varintValue !== 1) continue;
+        const innerField = onlyField(outerFields, 74);
+        if (!innerField) continue;
+        const inner = outer.subarray(innerField.valueStart, innerField.end);
+        const promptField = onlyField(readFields(inner) || [], 10);
+        if (!promptField) continue;
+        const prompt = new TextDecoder("utf-8", { fatal: true }).decode(inner.subarray(promptField.valueStart, promptField.end));
+        const normalized = normalizeText(prompt);
+        if (
+          (normalized !== normalizeText(lastPrompt) && normalized !== normalizeText(recentSend)) ||
+          /^\s*\[System Time:/i.test(prompt)
+        ) continue;
+        matches.push({ index, key, bytes, rootField, outer, innerField, inner, promptField, prompt });
+      } catch (_) {}
     }
+    if (matches.length !== 1) return bodyStr;
+    const { index, key, bytes, rootField, outer, innerField, inner, promptField, prompt } = matches[0];
+    const promptBytes = new TextEncoder().encode(formatPrefix() + "\n" + prompt);
+    const nextInner = replaceFieldValue(inner, promptField, promptBytes);
+    const nextOuter = replaceFieldValue(outer, innerField, nextInner);
+    const next = replaceFieldValue(bytes, rootField, nextOuter);
+    let nextBinary = "";
+    for (let i = 0; i < next.length; i += 8192) {
+      nextBinary += String.fromCharCode(...next.subarray(i, i + 8192));
+    }
+    parts[index] = key + "=" + encodeURIComponent(btoa(nextBinary));
+    sendingPrompt = "";
+    return parts.join("&");
   }
 
   function augmentBody(body) {
