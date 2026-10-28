@@ -1,6 +1,6 @@
 {
   "appDesc": {
-    "message": "Optionally add your local time to Gemini prompts (off by default), and navigate long chats with an interactive timeline.",
+    "message": "Navigate long Gemini chats with an interactive timeline. Optionally add your local time to prompts (off by default).",
     "description": "Extension description shown in the Chrome Web Store and the extensions page."
   },
   "sidebarLabel": {
