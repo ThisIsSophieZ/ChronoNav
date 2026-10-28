@@ -242,6 +242,98 @@
     return augmentJsonLike(bodyStr);
   }
 
+  function isProcessSessionUrl(url) {
+    try {
+      const parsed = new URL(url, location.href);
+      return (
+        parsed.origin === "https://geminiweb-pa.clients6.google.com" &&
+        parsed.pathname === "/v1/processSession"
+      );
+    } catch (_) {
+      return false;
+    }
+  }
+
+  function readVarint(bytes, start) {
+    let value = 0;
+    for (let i = 0; i < 5 && start + i < bytes.length; i++) {
+      const byte = bytes[start + i];
+      value += (byte & 0x7f) * 2 ** (7 * i);
+      if (!(byte & 0x80)) return { value, next: start + i + 1 };
+    }
+    return null;
+  }
+
+  function writeVarint(value) {
+    const result = [];
+    do {
+      let byte = value % 128;
+      value = Math.floor(value / 128);
+      if (value) byte |= 0x80;
+      result.push(byte);
+    } while (value);
+    return result;
+  }
+
+  /**
+   * Gemini's current plain-text send uses a small protobuf envelope:
+   * field 2 { field 1 = 1, field 9 { field 1 = prompt } }.
+   * Accept only that exact shape; leave attachments and unknown variants untouched.
+   */
+  function augmentProcessSession(bodyStr) {
+    if (typeof bodyStr !== "string" || !lastPrompt) return bodyStr;
+    const parts = bodyStr.split("&");
+    const index = parts.findIndex((part) => part.startsWith("req0___data__="));
+    if (index < 0) return bodyStr;
+
+    try {
+      const encoded = decodeURIComponent(parts[index].slice("req0___data__=".length).replace(/\+/g, " "));
+      const binary = atob(encoded);
+      const bytes = Uint8Array.from(binary, (char) => char.charCodeAt(0));
+      let cursor = 0;
+      const field = readVarint(bytes, cursor);
+      if (!field || field.value !== 18) return bodyStr;
+      cursor = field.next;
+      const outerLength = readVarint(bytes, cursor);
+      if (!outerLength || outerLength.value !== bytes.length - outerLength.next) return bodyStr;
+      cursor = outerLength.next;
+      const kind = readVarint(bytes, cursor);
+      if (!kind || kind.value !== 8) return bodyStr;
+      cursor = kind.next;
+      const kindValue = readVarint(bytes, cursor);
+      if (!kindValue || kindValue.value !== 1) return bodyStr;
+      cursor = kindValue.next;
+      const innerField = readVarint(bytes, cursor);
+      if (!innerField || innerField.value !== 74) return bodyStr;
+      cursor = innerField.next;
+      const innerLength = readVarint(bytes, cursor);
+      if (!innerLength || innerLength.value !== bytes.length - innerLength.next) return bodyStr;
+      cursor = innerLength.next;
+      const promptField = readVarint(bytes, cursor);
+      if (!promptField || promptField.value !== 10) return bodyStr;
+      cursor = promptField.next;
+      const promptLength = readVarint(bytes, cursor);
+      if (!promptLength || promptLength.value !== bytes.length - promptLength.next) return bodyStr;
+      const prompt = new TextDecoder("utf-8", { fatal: true }).decode(bytes.subarray(promptLength.next));
+      if (normalizeText(prompt) !== normalizeText(lastPrompt) || /^\s*\[System Time:/i.test(prompt)) {
+        return bodyStr;
+      }
+
+      const promptBytes = new TextEncoder().encode(formatPrefix() + "\n" + prompt);
+      const inner = Uint8Array.from([10, ...writeVarint(promptBytes.length), ...promptBytes]);
+      const outer = Uint8Array.from([8, 1, 74, ...writeVarint(inner.length), ...inner]);
+      const next = Uint8Array.from([18, ...writeVarint(outer.length), ...outer]);
+      let nextBinary = "";
+      for (let i = 0; i < next.length; i += 8192) {
+        nextBinary += String.fromCharCode(...next.subarray(i, i + 8192));
+      }
+      parts[index] = "req0___data__=" + encodeURIComponent(btoa(nextBinary));
+      return parts.join("&");
+    } catch (_) {
+      return bodyStr;
+    }
+  }
+
   function augmentBody(body) {
     if (body == null) return body;
     if (typeof body === "string") return augmentBodyString(body);
@@ -349,19 +441,20 @@
     const method = this.__chronoNavMethod || "GET";
     const url = this.__chronoNavUrl || "";
     const contentType = this.__chronoNavContentType || "";
+    const processSession = isProcessSessionUrl(url);
 
     if (
       !settings.enabled ||
       method === "GET" ||
       method === "HEAD" ||
-      !shouldAugment(url) ||
+      !(processSession || shouldAugment(url)) ||
       !isSupportedContentType(contentType) ||
       typeof body !== "string"
     ) {
       return origSend.apply(this, arguments);
     }
 
-    const nextBody = augmentBodyString(body);
+    const nextBody = processSession ? augmentProcessSession(body) : augmentBodyString(body);
     return origSend.call(this, nextBody);
   };
 })();
