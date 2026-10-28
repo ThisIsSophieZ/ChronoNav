@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+### 2026-10-29 — README release summary
+
+- Added concise English and Chinese v1.0.1 summaries to the READMEs, including the submitted-for-review status, refresh persistence fix, timeline label improvement, and unchanged permissions.
+
 ### 2026-10-29 — prelaunch disclosure audit
 
 - Clarified the privacy policy, store listing, and README wording: the opt-in timestamp travels in the normal request to Google's Gemini service, which may use Google-operated backend hosts. The extension's site access remains limited to `gemini.google.com`. The store guidance now explicitly discloses local website-content handling, requires full-bleed, unpadded screenshots, and includes replacement copy for the existing unqualified "no external servers" claim.

@@ -17,6 +17,18 @@ ChronoNav is an independently developed browser extension. It is not affiliated 
 
 ---
 
+## What's new in v1.0.1
+
+v1.0.1 was submitted for Chrome Web Store review on October 29, 2026. The store may continue to serve v1.0.0 until the update is approved.
+
+- Fixed time-context timestamps disappearing from the timeline after a refresh, including the first message in a new chat and messages sent with Enter.
+- Improved timeline labels so Gemini's screen-reader heading is not repeated in the visible message text.
+- Kept Time Context opt-in and off by default; no new permissions.
+
+See [CHANGELOG.md](./CHANGELOG.md) for the detailed fix history.
+
+---
+
 ## 💡 Why build it
 
 LLMs are smart, but they usually lack reliable real-world time context.
@@ -145,6 +157,7 @@ For private security or privacy reports, email `hi@thebrownielab.com` or see [SE
 
 * **2026-07** — ChronoNav v1.0 shipped
 * **2026-09** — Passed **100+ installs**
+* **2026-10** — Submitted v1.0.1 for Chrome Web Store review
 * Still picking up organic installs after active promotion stopped 🐌
 
 ChronoNav is a small, independent, actively maintained project.
