@@ -305,8 +305,24 @@
     const inner =
       el.querySelector("div.query-content") ||
       el.querySelector('[data-content="user-message"]') ||
-      el.querySelector("message-content");
-    return (inner ? inner.innerText : el.innerText) || el.textContent || "";
+      el.querySelector("message-content") ||
+      el;
+    // Gemini now includes a screen-reader heading containing the full prompt
+    // alongside the visible message lines. Read the lines directly so the
+    // heading does not duplicate the timeline label. textContent also keeps a
+    // System Time line readable after it has been hidden with display:none.
+    const lines = inner.querySelectorAll("p.query-text-line");
+    if (lines.length) {
+      return Array.from(lines, (line) => line.textContent || "").join("\n");
+    }
+    // Older/different message markup: exclude accessibility-only duplicates.
+    const copy = inner.cloneNode(true);
+    copy
+      .querySelectorAll(".screen-reader-user-query-label, .cdk-visually-hidden, [class*='screen-reader']")
+      .forEach((node) => node.remove());
+    copy.querySelectorAll("br").forEach((node) => node.replaceWith("\n"));
+    copy.querySelectorAll("p, div, li, pre, blockquote").forEach((node) => node.prepend("\n"));
+    return copy.textContent || "";
   }
 
   /** 元素的整段文本是否「只有」[System Time: ...]（即前缀独占一个块级元素 / 一行，如 Gemini 的 <p class="query-text-line">）。 */
@@ -348,7 +364,7 @@
       userEl.querySelector('[data-content="user-message"]') ||
       userEl.querySelector("message-content") ||
       userEl;
-    const raw = inner.innerText != null ? inner.innerText : inner.textContent || "";
+    const raw = getRawMessageText(userEl);
     if (!SYSTEM_TIME_FIND_RE.test(raw)) return;
 
     function stripFromTextNode(textNode) {
@@ -525,13 +541,7 @@
   function getMessageText(el) {
     const raw = getRawMessageText(el);
     const parsed = parseLeadingSystemTime(raw);
-    let body = parsed.stripped;
-    body = body
-      .replace(/^you said\s+/i, "")
-      .replace(/^你说[:：]?\s*/i, "")
-      .replace(/\s+/g, " ")
-      .trim();
-    return body;
+    return parsed.stripped;
   }
 
   function truncatePreviewText(text, maxChars) {
