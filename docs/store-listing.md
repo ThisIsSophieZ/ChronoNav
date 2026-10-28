@@ -69,7 +69,7 @@ ChronoNav is an independent extension built to fix exactly that, making your AI 
 
 As an independent developer, I take data security seriously. ChronoNav runs entirely in your browser:
 
-- Zero Tracking, Zero Ads: It collects no user data and sends nothing to any analytics or third-party servers. (When Time Context is on, the timestamp is added locally before your prompt is sent to Gemini.)
+- Zero Tracking, Zero Ads: No analytics, ads, or separate network requests by ChronoNav. When Time Context is on, the timestamp is added locally to your prompt and sent through the normal request to Google's Gemini service.
 
 - Minimal Permissions: It requests only the non-sensitive "storage" permission (to remember your toggle and precision settings locally) plus site access limited to Gemini (gemini.google.com)—nothing else.
 
@@ -105,7 +105,7 @@ ChronoNav 是专为解决这些体验而诞生的独立扩展，让你的 AI 工
 
 作为独立开发者，我深知数据安全的重要性。ChronoNav 采用纯前端本地架构：
 
-- 零追踪、零广告：不收集任何用户数据，不向任何分析或第三方服务器发送信息。（时间上下文功能开启时，时间戳仅作为你原有请求的一部分发送给 Gemini 本身。）
+- 零追踪、零广告：ChronoNav 不包含分析或广告，也不会另行发起网络请求。开启时间上下文后，时间戳会在本地加入提示词，并随正常请求发送至 Google 的 Gemini 服务。
 
 - 最小权限：仅申请非敏感的 storage 权限（用于在本地保存你的开关与精度偏好），以及仅限于 Gemini（gemini.google.com）的站点访问权限，别无其他。
 
